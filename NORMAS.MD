@@ -11,9 +11,14 @@ a una asignatura de 33, y suspenderla
 ## NORMAS DEL PROGRAMA
 - Este programa esta totalmente hecho por mi, Unai, excepto cuando se necesite llamar a la base de datos
 - El codigo relacionado a la base de datos esta desarollado por Claude
+- Por cada accion que puede hacer el usuario o el programa hay un script que es donde esta el codigo que realiza
+esta accion, con tal de tener un codigo mas ordenado
 - El programa se lanza usando main.py, que primero chequeara si existe la base de datos y si no existe la creara
-- Despues de comprobarlo, main.py llamara a menu.py, que es donde interactua el usuario, y se correra en bucle hasta el cierre del programa
+- Despues de comprobarlo, main.py llamara a menu.py, que es donde interactua el usuario, y se correra en bucle
+hasta el cierre del programa
 - Si no existiera la base de datos se crearia automaticamente. Todo esto lo hace el archivo db_check.py
+- El archivo db_check.py sirve para conectar la base de datos o en su defecto crearla, pero cada accion que
+requiera usar la base de datos debe llamarse desde el propio fichero de la funcion
 - Cuando se muestren todas las asignaturas, se deben mostrar de 5 en 5, y si el usuario precisa escoger otra
 asignatura que no se ve, deberia poder ver las otras 5 mediante las flechas de direccion
 - Cuando se muestren todas las asignaturas, se han de presentar con un numero y un punto delante, seguido de un especio
@@ -27,6 +32,13 @@ asignatura. Cada vez que se use la flecha para mostrar opciones, se deben borrar
 anteriormente
 - Cuando se muestren las faltas almacenadas en la base de datos, se debe mostrar el id, la asignatura, y si es
 justificada o no (S/N). 
+- En Python, cuando hayas de usar format, escribe siempre {} y al final .format(variable)
+- Si modifico este archivo, NORMAS.MD, informare a Claude sobre ello y debera introducir las nuevas normas en 
+CLAUDE.md
+- Si alguna modificacion de alguna regla o la creacion de una regla nueva hace que la forma en la que funciona el
+programa sea contraria a la especificada, debe volver a hacerse
+- Cuando se haga un commit en git, debe añadirse con la instruccion -m todos los cambios que se han hecho de 
+manera general
 
 ### Funcion añadir
 -   Esta funcion sirve para que el usuario pueda añadir faltas de asistencia a la base de datos. 

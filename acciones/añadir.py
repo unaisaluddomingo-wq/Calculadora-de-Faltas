@@ -1,15 +1,18 @@
-from menu import menu
-from asignaturas import asignaturas
-ASIGNATURAS = asignaturas
+from acciones.db_check import conectar
+from acciones.elegir_asignatura import elegir_asignatura
+from acciones.pedir_fecha import pedir_fecha
 
-def añadir(asignatura, total_horas, dia, mes, año, justificada):
-    asignatura = int(int("Elige la asignatura a la que has faltado: ")) #Aqui deberian mostrarse las asignaturas
-    # ordenadas, cada una con su numero
-    total_horas = int(int("¿Cuantas horas has faltado?: "))
-    dia = int(input("¿Que dia?: "))
-    mes = int(input("¿Que mes?: "))
-    año = int(input("¿Que año?: "))
 
-    #Aqui la orden de llamar a la base de datos con toda la info del usuario y añadir la falta.
-    print ("Falta de asistencia registrada")
-    menu()
+def añadir():
+    nombre = elegir_asignatura("Elige la asignatura a la que has faltado: ")
+    total_horas = int(input("¿Cuantas horas has faltado?: "))
+    fecha = pedir_fecha()
+    justificada = input("¿Es justificada? (S/N): ").strip().upper() == "S"
+
+    with conectar() as con:
+        con.execute(
+            "INSERT INTO faltas (asignatura, fecha, justificada, horas) VALUES (?, ?, ?, ?)",
+            (nombre, fecha, int(justificada), total_horas),
+        )
+    print("Falta de asistencia registrada")
+    input("Pulsa enter para continuar")

@@ -23,6 +23,12 @@ requiera usar la base de datos debe llamarse desde el propio fichero de la funci
 asignatura que no se ve, deberia poder ver las otras 5 mediante las flechas de direccion
 - Cuando se muestren todas las asignaturas, se han de presentar con un numero y un punto delante, seguido de un especio
 y el nombre de la asignatura. 
+- La carpeta acciones solo contiene las funciones propias del programa (añadir, consultar, modificar) y db_check.py.
+No se crean scripts auxiliares sueltos (como pedir_fecha o elegir_asignatura): cada funcion hace por si misma
+todo lo que necesita (pedir la fecha, elegir la asignatura, dibujar tablas...), con funciones privadas dentro de
+su propio fichero
+- Cuando se muestre cualquier lista (asignaturas, faltas...), se debe mostrar como una tabla en arte ASCII, separando
+filas y columnas con los simbolos "+" y "-" (y "|" para los lados), como el cliente de MySQL en CLI
 - Despues de finalizar cualquier accion como añadir, consultar o modificar faltas, se le pedira al usuario que pulse
 enter para continuar
 - Cuando se muestren las faltas almacenadas en la base de datos, se deben mostrar de 5 en 5. En caso de no caber,
@@ -31,7 +37,7 @@ el usuario deberia poder ver otras 5 usando las flechas de direccion
 asignatura. Cada vez que se use la flecha para mostrar opciones, se deben borrar inmediatamente las mostradas
 anteriormente
 - Cuando se muestren las faltas almacenadas en la base de datos, se debe mostrar el id, la asignatura, y si es
-justificada o no (S/N). 
+justificada o no (S/N). Ademas se muestran la fecha y las horas para identificar mejor cada falta.
 - En Python, cuando hayas de usar format, escribe siempre {} y al final .format(variable)
 - Si modifico este archivo, NORMAS.MD, informare a Claude sobre ello y debera introducir las nuevas normas en 
 CLAUDE.md

@@ -1,34 +1,40 @@
+import os
+
 from acciones.añadir import añadir
 from acciones.consultar import consultar
 from acciones.modificar import modificar
+
 
 def menu():
 
     #Menu principal del proyecto
 
-    #Mensaje de saludo
-    bienvenida = "Bienvenido al menu principal"
-    print("-"*len(bienvenida))
-    print(bienvenida)
-    print("-"*len(bienvenida))
-
     """Opciones disponibles = 1 (añadir falta),
     2 (consultar faltas),
-    3 (modificar faltas)"""
+    3 (modificar faltas),
+    4 (salir del programa)"""
 
-    while True:
-        eleccion = None
+    acciones = {"1": añadir, "2": consultar, "3": modificar}
+    bienvenida = "Bienvenido al menu principal"
+    aviso = ""
 
-        while "1" or "2," or "3" in eleccion:
-            eleccion = input("Elije una opcion: ")
+    try:
+        while True:
+            os.system("cls")
+            print("-" * len(bienvenida))
+            print(bienvenida)
+            print("-" * len(bienvenida))
+            if aviso:
+                print(aviso)
+                aviso = ""
 
-            if eleccion == "1":
-                añadir()
-            elif eleccion == "2":
-                consultar()
-            elif eleccion == "3":
-                modificar()
-            elif eleccion == "4":
-                exit()
+            eleccion = input("Elije una opcion. 1. Añadir falta, 2. Consultar falta, 3. Modificar falta, 4. Salir: ").strip()
 
-        print("Opcion incorrecta. Asegurate de introducir un numero del 1 al 4")
+            if eleccion == "4":
+                return
+            if eleccion in acciones:
+                acciones[eleccion]()
+            else:
+                aviso = "Opcion incorrecta. Asegurate de introducir un numero del 1 al 4"
+    except (KeyboardInterrupt, EOFError):
+        print("\nHasta pronto")

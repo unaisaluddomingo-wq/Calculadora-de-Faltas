@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Calculadora de Faltas: a Spanish-language Python CLI that tracks school attendance absences per subject (a vocational-cycle student's own project). No dependencies, build, lint or test setup; there is a `.venv` (gitignored-style, don't read it). Run with `python main.py`.
+Calculadora de Faltas (version 1.0): a Spanish-language Python CLI that tracks school attendance absences per subject (a vocational-cycle student's own project). No dependencies (stdlib only, Windows: uses `msvcrt`), build, lint or test setup; there is a `.venv` (gitignored-style, don't read it). Run with `python main.py` from a real terminal (arrow keys don't work in some IDE consoles).
 
 ## Read first: NORMAS.MD
 
@@ -16,21 +16,21 @@ The author writes all program logic themself; **only the database code (`../../a
 
 ## Architecture
 
-- `../../sistema/main.py` → calls `comprobar_db()` (`acciones/db_check.py`) then `menu()`.
+- `../../main.py` → calls `comprobar_db()` (`acciones/db_check.py`) then `menu()`.
 - `../../sistema/menu.py` → main loop; dispatches options 1/2/3 to `añadir`, `consultar`, `modificar` (in `acciones/`), 4 exits.
 - `../../acciones/db_check.py` → only connects to (`conectar()`) or creates (`comprobar_db()`) the SQLite DB `faltas.db` (table `faltas`: id, asignatura, fecha AAAA-MM-DD, justificada 0/1, horas). SQL queries live in each action's own file, not here.
-- `../../acciones` → one script per action (`añadir`, `consultar`, `modificar`, plus helpers `elegir_asignatura`, `pedir_fecha`). Actions must not import `menu` (menu loops on its own).
+- `../../acciones` → only the program's own functions: `añadir`, `consultar`, `modificar` (+ `db_check`). No standalone helper scripts: each action does everything itself (ask the date, choose the subject, draw tables) with private `_functions` inside its own file, even if that duplicates a little code. Actions must not import `menu` (menu loops on its own).
 - `../../lista_asignaturas/asignaturas.py` → `ASIGNATURAS` dict name → total hours (33/66/99/132) and `asignaturas()` accessor. Counts are per subject.
 
 ## Code rules (from NORMAS.MD)
 
 - One script per action the user or program can do; any action needing the DB calls it from its own file via `conectar()`.
 - Use `"{}".format(x)`, never f-strings.
+- Every list shown (subjects, absences) is an ASCII table MySQL-CLI style (`+`, `-` and `|` borders), paginated 5 at a time with arrow keys, clearing the screen on each redraw.
+- Validate all user input (numbers, dates, S/N) and re-ask instead of crashing.
 - If NORMAS.MD changes, copy the new rules into this file; if a rule change contradicts how the program currently works, rework the program.
 - Git commits must pass `-m` with a general summary of all changes made.
 
 ## Pending / known issues
 
-- Arrow-key pagination (5 at a time, erasing the previous page) required by NORMAS.MD is not implemented; lists are shown in full.
-- `../../sistema/menu.py`'s inner `while "1" or ...` is always true, so the "Opcion incorrecta" message is never reached.
 - NORMAS.MD "Funciones por añadir" (startup 15% warning, new school year) are not implemented.

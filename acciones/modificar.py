@@ -1,6 +1,9 @@
+from menu import menu
+
 from asignaturas import asignaturas
 ASIGNATURAS = asignaturas
 
-def modificar(asignatura, total_horas, fecha, justificada):
-    pass
-    #Aqui deberias consultar la base de datos y pedirle al usuario que elija, usando un numero del uno al 10, que fal
+def modificar(falta_de_asistencia):
+    falta_de_asistencia = int(input("Elige la falta de asistencia que deseas modificar: "))
+
+menu()

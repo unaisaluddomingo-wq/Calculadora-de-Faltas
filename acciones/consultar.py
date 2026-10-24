@@ -1,4 +1,4 @@
-from asignaturas import asignaturas
+from lista_asignaturas.asignaturas import asignaturas
 from acciones.db_check import conectar
 from acciones.elegir_asignatura import elegir_asignatura
 

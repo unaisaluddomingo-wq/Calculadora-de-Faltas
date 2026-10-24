@@ -12,15 +12,15 @@ Calculadora de Faltas: a Spanish-language Python CLI that tracks school attendan
 
 ## Ownership convention
 
-The author writes all program logic themself; **only the database code (`acciones/db_check.py` and DB calls) is meant to be written by Claude**. Code comments in the source (e.g. in `asignaturas.py`) are often TODO instructions from the author to Claude. Don't rewrite the author's non-DB code unprompted.
+The author writes all program logic themself; **only the database code (`../../acciones/db_check.py` and DB calls) is meant to be written by Claude**. Code comments in the source (e.g. in `../../lista_asignaturas/asignaturas.py`) are often TODO instructions from the author to Claude. Don't rewrite the author's non-DB code unprompted.
 
 ## Architecture
 
-- `main.py` → calls `comprobar_db()` (`acciones/db_check.py`) then `menu()`.
-- `menu.py` → main loop; dispatches options 1/2/3 to `añadir`, `consultar`, `modificar` (in `acciones/`), 4 exits.
-- `acciones/db_check.py` → only connects to (`conectar()`) or creates (`comprobar_db()`) the SQLite DB `faltas.db` (table `faltas`: id, asignatura, fecha AAAA-MM-DD, justificada 0/1, horas). SQL queries live in each action's own file, not here.
-- `acciones/` → one script per action (`añadir`, `consultar`, `modificar`, plus helpers `elegir_asignatura`, `pedir_fecha`). Actions must not import `menu` (menu loops on its own).
-- `asignaturas.py` → `ASIGNATURAS` dict name → total hours (33/66/99/132) and `asignaturas()` accessor. Counts are per subject.
+- `../../sistema/main.py` → calls `comprobar_db()` (`acciones/db_check.py`) then `menu()`.
+- `../../sistema/menu.py` → main loop; dispatches options 1/2/3 to `añadir`, `consultar`, `modificar` (in `acciones/`), 4 exits.
+- `../../acciones/db_check.py` → only connects to (`conectar()`) or creates (`comprobar_db()`) the SQLite DB `faltas.db` (table `faltas`: id, asignatura, fecha AAAA-MM-DD, justificada 0/1, horas). SQL queries live in each action's own file, not here.
+- `../../acciones` → one script per action (`añadir`, `consultar`, `modificar`, plus helpers `elegir_asignatura`, `pedir_fecha`). Actions must not import `menu` (menu loops on its own).
+- `../../lista_asignaturas/asignaturas.py` → `ASIGNATURAS` dict name → total hours (33/66/99/132) and `asignaturas()` accessor. Counts are per subject.
 
 ## Code rules (from NORMAS.MD)
 
@@ -32,5 +32,5 @@ The author writes all program logic themself; **only the database code (`accione
 ## Pending / known issues
 
 - Arrow-key pagination (5 at a time, erasing the previous page) required by NORMAS.MD is not implemented; lists are shown in full.
-- `menu.py`'s inner `while "1" or ...` is always true, so the "Opcion incorrecta" message is never reached.
+- `../../sistema/menu.py`'s inner `while "1" or ...` is always true, so the "Opcion incorrecta" message is never reached.
 - NORMAS.MD "Funciones por añadir" (startup 15% warning, new school year) are not implemented.

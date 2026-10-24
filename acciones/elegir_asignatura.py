@@ -1,4 +1,4 @@
-from asignaturas import asignaturas
+from lista_asignaturas.asignaturas import asignaturas
 
 
 def elegir_asignatura(pregunta):

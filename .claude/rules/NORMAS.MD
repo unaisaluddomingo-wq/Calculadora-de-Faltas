@@ -35,8 +35,8 @@ justificada o no (S/N).
 - En Python, cuando hayas de usar format, escribe siempre {} y al final .format(variable)
 - Si modifico este archivo, NORMAS.MD, informare a Claude sobre ello y debera introducir las nuevas normas en 
 CLAUDE.md
-- Si alguna modificacion de alguna regla o la creacion de una regla nueva hace que la forma en la que funciona el
-programa sea contraria a la especificada, debe volver a hacerse
+- Antes de aplicar cualquier cambio en este claude.md, analiza si las nuevas normas contradicen las existentes
+o rompen la lógica del sistema
 - Cuando se haga un commit en git, debe añadirse con la instruccion -m todos los cambios que se han hecho de 
 manera general
 

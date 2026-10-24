@@ -1,5 +1,5 @@
 from acciones.db_check import comprobar_db
-from menu import menu
+from sistema.menu import menu
 
 def main():
     comprobar_db()

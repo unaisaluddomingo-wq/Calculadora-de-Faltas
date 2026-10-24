@@ -77,6 +77,12 @@ def _horas_faltadas(asignatura=None):
     return fila[0]
 
 
+def _aviso_limite(nombre, faltas, total):
+    porcentaje = faltas / total * 100
+    if porcentaje > 20:
+        print("¡ALERTA! {}: {:.1f}% de faltas; has superado el límite del 20%.".format(nombre, porcentaje))
+
+
 def consultar():
     todas = asignaturas()
     while True:
@@ -87,8 +93,12 @@ def consultar():
 
     if opcion == "1":
         print("Faltas totales: {}/{}".format(_horas_faltadas(), sum(todas.values())))
+        for nombre, total in todas.items():
+            _aviso_limite(nombre, _horas_faltadas(nombre), total)
     else:
         nombre = _elegir_asignatura("Introduce que asignatura quieres consultar: ")
-        print("{}: {}/{}".format(nombre, _horas_faltadas(nombre), todas[nombre]))
+        faltas = _horas_faltadas(nombre)
+        print("{}: {}/{}".format(nombre, faltas, todas[nombre]))
+        _aviso_limite(nombre, faltas, todas[nombre])
 
     input("Pulsa enter para continuar")

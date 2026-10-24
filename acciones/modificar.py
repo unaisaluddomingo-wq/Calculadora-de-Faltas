@@ -85,7 +85,11 @@ def _pedir_fecha():
         mes = _pedir_entero("¿Que mes?: ", 1, 12)
         año = _pedir_entero("¿Que año?: ", 2000, 2100)
         try:
-            return date(año, mes, dia).isoformat()
+            fecha = date(año, mes, dia)
+            if fecha > date.today():
+                print("La fecha no puede ser futura")
+                continue
+            return fecha.isoformat()
         except ValueError:
             print("Esa fecha no existe, vuelve a introducirla")
 

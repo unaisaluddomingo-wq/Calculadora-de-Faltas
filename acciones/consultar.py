@@ -77,10 +77,16 @@ def _horas_faltadas(asignatura=None):
     return fila[0]
 
 
+def _leer_porcentaje():
+    with conectar() as con:
+        fila = con.execute("SELECT valor FROM config WHERE clave = 'porcentaje_maximo'").fetchone()
+    return int(fila[0]) if fila else None
+
+
 def _aviso_limite(nombre, faltas, total):
-    porcentaje = faltas / total * 100
-    if porcentaje > 20:
-        print("¡ALERTA! {}: {:.1f}% de faltas; has superado el límite del 20%.".format(nombre, porcentaje))
+    limite = _leer_porcentaje()
+    if limite is not None and faltas * 100 > limite * total:
+        print("¡ALERTA! {}: {:.1f}% de faltas; has superado el límite del {}%.".format(nombre, faltas / total * 100, limite))
 
 
 def consultar():

@@ -1,11 +1,14 @@
 # GUIA PARA MI PROYECTO DE CONTADOR DE FALTAS DE ASISTENCIA
 
 ## NORMAS DEL CICLO:
-- Solo puedes faltar un 20% de las horas de cada asignatura
-- Cada asignatura tiene un total de horas, que pueden ser 33, 66, 99 o 132. Todo se especifica en asignaturas.py
-- Puedes faltar 20 horas en una asignatura de 132 horas y que no pase nada, y faltar ese mismo numero de horas
+- Solo puedes faltar un porcentaje de las horas de cada asignatura. Ese porcentaje lo elige el usuario la primera vez
+que inicia el programa (en mi centro es un 20%) y se guarda en la base de datos (tabla config), para que cualquiera
+pueda usar el proyecto con las normas de su centro
+- Cada asignatura tiene un total de horas (por ejemplo 33, 66, 99 o 132). Las asignaturas y sus horas las define el
+usuario y se guardan en la base de datos (tabla asignaturas); asignaturas.py solo las lee
+- Con un 20%, puedes faltar 20 horas en una asignatura de 132 horas y que no pase nada, y faltar ese mismo numero de horas
 a una asignatura de 33, y suspenderla
-- Superar ese 20% de faltas de asistencia supone el suspenso inmediato de la asignatura
+- Superar ese porcentaje de faltas de asistencia supone el suspenso inmediato de la asignatura
 - Las horas son de todo el año escolar, no trimestral o mensual, son de un año escolar
 
 ## NORMAS DEL PROGRAMA
@@ -23,7 +26,7 @@ requiera usar la base de datos debe llamarse desde el propio fichero de la funci
 asignatura que no se ve, deberia poder ver las otras 5 mediante las flechas de direccion
 - Cuando se muestren todas las asignaturas, se han de presentar con un numero y un punto delante, seguido de un especio
 y el nombre de la asignatura. 
-- La carpeta acciones solo contiene las funciones propias del programa (añadir, consultar, modificar) y db_check.py.
+- La carpeta acciones solo contiene las funciones propias del programa (añadir, consultar, modificar, materias, porcentaje, sugerencia) y db_check.py.
 No se crean scripts auxiliares sueltos (como pedir_fecha o elegir_asignatura): cada funcion hace por si misma
 todo lo que necesita (pedir la fecha, elegir la asignatura, dibujar tablas...), con funciones privadas dentro de
 su propio fichero
@@ -54,6 +57,17 @@ de todas las faltas en general, pero cada asignatura tiene que llevar su propio 
 - La base de datos tambien nececita saber la asignatura a la que has faltado, la fecha, si la falta es justificada
 o no, y el total de horas que el usuario ha faltado (porque hay materias que se imparten varias horas seguidas)
 
+### Inicio del programa y funcion materias (acciones/materias.py)
+- Antes de nada, si no esta establecido, se pregunta al usuario que porcentaje de horas puede faltar por modulo (1-100)
+y se guarda en la base de datos (acciones/porcentaje.py). Despues se comprueban las asignaturas y se muestra la nota de
+sugerencia (acciones/sugerencia.py), y solo entonces se pasa al menu principal
+- Al iniciar, si la base de datos no tiene ninguna asignatura, se obliga al usuario a añadir al menos una: primero
+se pregunta el nombre y luego las horas. Tras añadir la primera se le pregunta si quiere añadir mas o pasar al
+programa. Si ya hay asignaturas, el programa arranca con normalidad
+- La opcion "Gestionar asignaturas" del menu permite crear asignaturas, eliminarlas, cambiar su nombre o cambiar sus horas
+- Los nombres no pueden estar vacios ni repetirse. Cambiar el nombre actualiza tambien las faltas de esa asignatura
+- Eliminar una asignatura pide confirmacion y borra tambien sus faltas. No se puede eliminar la ultima asignatura
+
 ### Funcion consultar
 - Esta funcion sirve para consultar las faltas que el usuario lleva en el curso
 - Primero se le pregunta al usuario si quiere ver las faltas que lleva en total (total horas faltadas / total horas
@@ -73,12 +87,6 @@ definitivamente, y si dice que no simplemente no se hace nada
 
 ### Funciones por añadir
 - Si esta vacio es que no hay funciones por añadir
-#### Funcion sugerencia: al iniciar el programa, se mirara en la base de datos que asignaturas tienen un 15% de faltas de asistencia. 
-- Si no hay, al iniciar el programa se mostrara un mensaje, por ejemplo: NOTA: ¡Vas muy bien con tus faltas
-de asistencia! ¡Sigue asi!
-- En caso de haber solo una asignatura que supere el 15%, se mostrara un mensaje, por ejemplo: NOTA, cuidado con
-(asignatura), ¡tienes un 15% de faltas de asistencia o mas!
-- En caso de haber varias, se mostrara un mensaje el mensaje pero con una asignatura al azar, nunca con 2
 #### Funcion nuevo año
 - El usuario podra elegir en el menu que ha empezado un nuevo año escolar, permitiendole borrar todas sus
 faltas de asistencia y preguntandole sobre los nuevos porcentajes y normas de asistencia

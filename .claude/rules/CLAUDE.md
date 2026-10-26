@@ -8,7 +8,7 @@ Calculadora de Faltas (version 1.0): a Spanish-language Python CLI that tracks s
 
 ## Read first: NORMAS.MD
 
-`NORMAS.MD` (in Spanish) is the authoritative spec: attendance rules (max 20% absences per subject, per school year, measured against each subject's own total hours), UI requirements, per-action behaviour (añadir / consultar / modificar) and a "Funciones por añadir" section (startup 15% warning, new-school-year reset). Consult it before implementing or changing any feature. Key UI rules: lists paginated 5 at a time navigated with arrow keys (previous options erased on redraw), subjects shown as `N. Name`, absences shown as id + subject + justified (S/N), and "press enter to continue" after every action.
+`NORMAS.MD` (in Spanish) is the authoritative spec: attendance rules (max absence percentage per subject chosen by the user, per school year, measured against each subject's own total hours), UI requirements, per-action behaviour (añadir / consultar / modificar) and a "Funciones por añadir" section (new-school-year reset). Consult it before implementing or changing any feature. Key UI rules: lists paginated 5 at a time navigated with arrow keys (previous options erased on redraw), subjects shown as `N. Name`, absences shown as id + subject + justified (S/N), and "press enter to continue" after every action.
 
 ## Ownership convention
 
@@ -16,11 +16,11 @@ The author writes all program logic themself; **only the database code (`../../a
 
 ## Architecture
 
-- `../../main.py` → calls `comprobar_db()` (`acciones/db_check.py`) then `menu()`.
-- `../../sistema/menu.py` → main loop; dispatches options 1/2/3 to `añadir`, `consultar`, `modificar` (in `acciones/`), 4 exits.
-- `../../acciones/db_check.py` → only connects to (`conectar()`) or creates (`comprobar_db()`) the SQLite DB `faltas.db` (table `faltas`: id, asignatura, fecha AAAA-MM-DD, justificada 0/1, horas). SQL queries live in each action's own file, not here.
-- `../../acciones` → only the program's own functions: `añadir`, `consultar`, `modificar` (+ `db_check`). No standalone helper scripts: each action does everything itself (ask the date, choose the subject, draw tables) with private `_functions` inside its own file, even if that duplicates a little code. Actions must not import `menu` (menu loops on its own).
-- `../../lista_asignaturas/asignaturas.py` → `ASIGNATURAS` dict name → total hours (33/66/99/132) and `asignaturas()` accessor. Counts are per subject.
+- `../../main.py` → calls `comprobar_db()` (`acciones/db_check.py`), then `configurar_porcentaje()` (`acciones/porcentaje.py`, asks the max absence % once and stores it in table `config`), `configuracion_inicial()` (`acciones/materias.py`, forces the user to create at least one subject if the DB has none), `sugerencia()` (`acciones/sugerencia.py`, startup note: warns about a random subject at >= 75% of the limit, i.e. 15% with a 20% limit, or congratulates the user) and finally `menu()`.
+- `../../sistema/menu.py` → main loop; dispatches options 1/2/3/4 to `añadir`, `consultar`, `modificar`, `materias` (in `acciones/`), 5 exits.
+- `../../acciones/db_check.py` → only connects to (`conectar()`) or creates (`comprobar_db()`) the SQLite DB `faltas.db` (tables `faltas`: id, asignatura, fecha AAAA-MM-DD, justificada 0/1, horas; `asignaturas`: nombre, horas; and `config`: clave, valor). SQL queries live in each action's own file, not here.
+- `../../acciones` → only the program's own functions: `añadir`, `consultar`, `modificar`, `materias` (create/delete/rename subjects, change their hours; also the startup check), `porcentaje`, `sugerencia` (+ `db_check`). No standalone helper scripts: each action does everything itself (ask the date, choose the subject, draw tables) with private `_functions` inside its own file, even if that duplicates a little code. Actions must not import `menu` (menu loops on its own).
+- `../../lista_asignaturas/asignaturas.py` → `asignaturas()` reads the user-defined subjects from the DB as a dict name → total hours (1-800 hours, e.g. 33/66/99/132). Counts are per subject.
 
 ## Code rules (from NORMAS.MD)
 
@@ -33,4 +33,4 @@ The author writes all program logic themself; **only the database code (`../../a
 
 ## Pending / known issues
 
-- NORMAS.MD "Funciones por añadir" (startup 15% warning, new school year) are not implemented.
+- NORMAS.MD "Funciones por añadir": the new school year reset is not implemented (the max % is currently only asked once).

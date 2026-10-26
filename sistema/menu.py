@@ -2,6 +2,7 @@ import os
 
 from acciones.añadir import añadir
 from acciones.consultar import consultar
+from acciones.materias import materias
 from acciones.modificar import modificar
 
 
@@ -12,9 +13,10 @@ def menu():
     """Opciones disponibles = 1 (añadir falta),
     2 (consultar faltas),
     3 (modificar faltas),
-    4 (salir del programa)"""
+    4 (gestionar asignaturas),
+    5 (salir del programa)"""
 
-    acciones = {"1": añadir, "2": consultar, "3": modificar}
+    acciones = {"1": añadir, "2": consultar, "3": modificar, "4": materias}
     bienvenida = "Bienvenido al menu principal"
     aviso = ""
 
@@ -28,13 +30,14 @@ def menu():
                 print(aviso)
                 aviso = ""
 
-            eleccion = input("Elije una opcion. 1. Añadir falta, 2. Consultar falta, 3. Modificar falta, 4. Salir: ").strip()
+            eleccion = input("Elije una opcion. 1. Añadir falta, 2. Consultar falta, 3. Modificar falta, "
+                             "4. Gestionar asignaturas, 5. Salir: ").strip()
 
-            if eleccion == "4":
+            if eleccion == "5":
                 return
             if eleccion in acciones:
                 acciones[eleccion]()
             else:
-                aviso = "Opcion incorrecta. Asegurate de introducir un numero del 1 al 4"
+                aviso = "Opcion incorrecta. Asegurate de introducir un numero del 1 al 5"
     except (KeyboardInterrupt, EOFError):
         print("\nHasta pronto")

@@ -30,3 +30,15 @@ def comprobar_db():
                    horas INTEGER NOT NULL CHECK (horas > 0)
                )"""
         )
+        con.execute(
+            """CREATE TABLE IF NOT EXISTS config (
+                   clave TEXT PRIMARY KEY,
+                   valor TEXT NOT NULL
+               )"""
+        )
+        con.execute(
+            """CREATE TABLE IF NOT EXISTS asignaturas (
+                   nombre TEXT PRIMARY KEY COLLATE NOCASE,
+                   horas INTEGER NOT NULL CHECK (horas > 0)
+               )"""
+        )

@@ -3,7 +3,7 @@ import os
 from datetime import date
 
 from acciones.db_check import conectar
-from lista_asignaturas.asignaturas import asignaturas
+from lista_asignaturas.obtener_asignaturas import asignaturas
 
 POR_PAGINA = 5
 

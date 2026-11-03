@@ -22,6 +22,7 @@ def _tabla(cabeceras, filas):
 def _elegir(cabeceras, filas, pregunta):
     """Muestra la tabla de 5 en 5 (flechas para cambiar de pagina) y devuelve la fila elegida.
     El usuario escribe el contenido de la primera columna (sin el punto final, si lo tiene)."""
+    abortar = int(str(filas[-1][0]).rstrip(".")) + 1  # numero inmediatamente posterior a la ultima opcion
     paginas = (len(filas) - 1) // POR_PAGINA + 1
     pagina = 0
     escrito = ""
@@ -32,6 +33,7 @@ def _elegir(cabeceras, filas, pregunta):
         inicio = pagina * POR_PAGINA
         print(_tabla(cabeceras, filas[inicio:inicio + POR_PAGINA]))
         print("Pagina {}/{} (usa las flechas para cambiar de pagina)".format(pagina + 1, paginas))
+        print("{}. Abortar".format(abortar))
         if aviso:
             print(aviso)
             aviso = ""
@@ -51,6 +53,9 @@ def _elegir(cabeceras, filas, pregunta):
             elif flecha in ("M", "P"):
                 pagina = min(pagina + 1, paginas - 1)
         elif tecla == "\r":
+            if escrito == str(abortar):
+                print()
+                return None
             for fila in filas:
                 if str(fila[0]).rstrip(".") == escrito:
                     print()
@@ -67,7 +72,8 @@ def _elegir(cabeceras, filas, pregunta):
 
 def _elegir_asignatura(pregunta):
     filas = [("{}.".format(i), nombre) for i, nombre in enumerate(asignaturas(), start=1)]
-    return _elegir(["N.", "Asignatura"], filas, pregunta)[1]
+    fila = _elegir(["N.", "Asignatura"], filas, pregunta)
+    return None if fila is None else fila[1]
 
 
 def _pedir_entero(pregunta, minimo, maximo):
@@ -126,10 +132,15 @@ def modificar():
 
     filas = [(id_falta, asignatura, fecha, horas, "S" if justificada else "N")
              for id_falta, asignatura, fecha, horas, justificada in faltas]
-    id_falta = _elegir(["ID", "Asignatura", "Fecha", "Horas", "Justificada"], filas,
-                       "Elige la falta de asistencia que deseas modificar (id): ")[0]
+    fila = _elegir(["ID", "Asignatura", "Fecha", "Horas", "Justificada"], filas,
+                   "Elige la falta de asistencia que deseas modificar (id): ")
+    if fila is None:
+        return
+    id_falta = fila[0]
 
-    accion = _pedir_opcion("1. Modificar\n2. Borrar\nElige una opcion: ", ("1", "2"))
+    accion = _pedir_opcion("1. Modificar\n2. Borrar\n3. Abortar\nElige una opcion: ", ("1", "2", "3"))
+    if accion == "3":
+        return
     if accion == "2":
         if _pedir_si_no("¿Seguro que quieres borrarla? (S/N): "):
             with conectar() as con:
@@ -138,10 +149,15 @@ def modificar():
         else:
             print("No se ha borrado la falta")
     else:
-        campo = _pedir_opcion("1. Asignatura\n2. Fecha\n3. Justificada\n4. Horas\n¿Que quieres modificar?: ",
-                              ("1", "2", "3", "4"))
+        campo = _pedir_opcion("1. Asignatura\n2. Fecha\n3. Justificada\n4. Horas\n5. Abortar\n¿Que quieres modificar?: ",
+                              ("1", "2", "3", "4", "5"))
+        if campo == "5":
+            return
         if campo == "1":
-            _actualizar(id_falta, "asignatura", _elegir_asignatura("Nueva asignatura: "))
+            nueva = _elegir_asignatura("Nueva asignatura: ")
+            if nueva is None:
+                return
+            _actualizar(id_falta, "asignatura", nueva)
         elif campo == "2":
             _actualizar(id_falta, "fecha", _pedir_fecha())
         elif campo == "3":

@@ -3,8 +3,10 @@ import random
 
 from acciones.db_check import conectar
 
-# La nota avisa al llegar al 75% del limite de faltas (con un limite del 20% son el 15% de las horas)
-FRACCION_AVISO = 0.75
+# Avisos segun el porcentaje del limite de faltas ya consumido (con un limite del 20%, el aviso es al 10% de las
+# horas y la alerta al 16%)
+PORCENTAJE_AVISO = 50
+PORCENTAJE_ALERTA = 80
 
 
 def _leer_porcentaje():
@@ -25,18 +27,27 @@ def _porcentajes_por_asignatura():
 
 
 def sugerencia():
-    """Al iniciar el programa avisa de una asignatura (al azar si hay varias) cerca del limite de faltas,
-    o felicita al usuario si no hay ninguna."""
+    """Al iniciar el programa avisa de una asignatura (al azar si hay varias) que llega al 80% o al 50% del limite
+    de faltas (muestra el aviso mas grave que se cumpla), o felicita al usuario si no hay ninguna."""
     limite = _leer_porcentaje()
     if limite is None:
         return
-    umbral = limite * FRACCION_AVISO
-    # comparacion con enteros (faltadas/total >= limite*75%) para evitar errores de redondeo con decimales
-    cerca = [nombre for nombre, total, faltadas in _porcentajes_por_asignatura() if faltadas * 400 >= limite * 3 * total]
+    filas = _porcentajes_por_asignatura()
+
+    def en_umbral(porcentaje):
+        # comparacion con enteros (faltadas/total >= limite% * porcentaje%) para evitar errores de redondeo
+        return [nombre for nombre, total, faltadas in filas if faltadas * 10000 >= limite * porcentaje * total]
+
+    alerta = en_umbral(PORCENTAJE_ALERTA)
+    aviso = en_umbral(PORCENTAJE_AVISO)
 
     os.system("cls")
-    if not cerca:
-        print("NOTA: ¡Vas muy bien con tus faltas de asistencia! ¡Sigue asi!")
+    if alerta:
+        print("ALERTA: cuidado con {}, ¡tienes un {:g}% de faltas de asistencia o mas!".format(
+            random.choice(alerta), limite * PORCENTAJE_ALERTA / 100))
+    elif aviso:
+        print("AVISO: ojo con {}, ¡ya tienes un {:g}% de faltas de asistencia o mas!".format(
+            random.choice(aviso), limite * PORCENTAJE_AVISO / 100))
     else:
-        print("NOTA: cuidado con {}, ¡tienes un {:g}% de faltas de asistencia o mas!".format(random.choice(cerca), umbral))
+        print("NOTA: ¡Vas muy bien con tus faltas de asistencia! ¡Sigue asi!")
     input("Pulsa enter para continuar")

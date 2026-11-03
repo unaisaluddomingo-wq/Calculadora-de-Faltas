@@ -22,6 +22,7 @@ def _tabla(cabeceras, filas):
 def _elegir_asignatura(pregunta):
     """Muestra las asignaturas de 5 en 5 (flechas para cambiar de pagina) y devuelve el nombre de la elegida."""
     filas = [("{}.".format(i), nombre) for i, nombre in enumerate(asignaturas(), start=1)]
+    abortar = len(filas) + 1  # numero inmediatamente posterior a la ultima opcion
     paginas = (len(filas) - 1) // POR_PAGINA + 1
     pagina = 0
     escrito = ""
@@ -32,6 +33,7 @@ def _elegir_asignatura(pregunta):
         inicio = pagina * POR_PAGINA
         print(_tabla(["N.", "Asignatura"], filas[inicio:inicio + POR_PAGINA]))
         print("Pagina {}/{} (usa las flechas para cambiar de pagina)".format(pagina + 1, paginas))
+        print("{}. Abortar".format(abortar))
         if aviso:
             print(aviso)
             aviso = ""
@@ -51,6 +53,9 @@ def _elegir_asignatura(pregunta):
             elif flecha in ("M", "P"):
                 pagina = min(pagina + 1, paginas - 1)
         elif tecla == "\r":
+            if escrito == str(abortar):
+                print()
+                return None
             for numero, nombre in filas:
                 if numero.rstrip(".") == escrito:
                     print()
@@ -99,6 +104,8 @@ def _pedir_si_no(pregunta):
 
 def añadir():
     nombre = _elegir_asignatura("Elige la asignatura a la que has faltado: ")
+    if nombre is None:
+        return
     total_horas = _pedir_entero("¿Cuantas horas has faltado?: ", 1, 24)
     fecha = _pedir_fecha()
     justificada = _pedir_si_no("¿Es justificada? (S/N): ")

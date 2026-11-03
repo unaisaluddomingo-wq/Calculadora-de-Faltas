@@ -21,6 +21,7 @@ def _tabla(cabeceras, filas):
 def _elegir_asignatura(pregunta):
     """Muestra las asignaturas de 5 en 5 (flechas para cambiar de pagina) y devuelve el nombre de la elegida."""
     filas = [("{}.".format(i), nombre) for i, nombre in enumerate(asignaturas(), start=1)]
+    abortar = len(filas) + 1  # numero inmediatamente posterior a la ultima opcion
     paginas = (len(filas) - 1) // POR_PAGINA + 1
     pagina = 0
     escrito = ""
@@ -31,6 +32,7 @@ def _elegir_asignatura(pregunta):
         inicio = pagina * POR_PAGINA
         print(_tabla(["N.", "Asignatura"], filas[inicio:inicio + POR_PAGINA]))
         print("Pagina {}/{} (usa las flechas para cambiar de pagina)".format(pagina + 1, paginas))
+        print("{}. Abortar".format(abortar))
         if aviso:
             print(aviso)
             aviso = ""
@@ -50,6 +52,9 @@ def _elegir_asignatura(pregunta):
             elif flecha in ("M", "P"):
                 pagina = min(pagina + 1, paginas - 1)
         elif tecla == "\r":
+            if escrito == str(abortar):
+                print()
+                return None
             for numero, nombre in filas:
                 if numero.rstrip(".") == escrito:
                     print()
@@ -92,10 +97,13 @@ def _aviso_limite(nombre, faltas, total):
 def consultar():
     todas = asignaturas()
     while True:
-        opcion = input("1. Ver faltas totales\n2. Ver faltas de una asignatura\nElige una opcion: ").strip()
-        if opcion in ("1", "2"):
+        opcion = input("1. Ver faltas totales\n2. Ver faltas de una asignatura\n3. Abortar\nElige una opcion: ").strip()
+        if opcion in ("1", "2", "3"):
             break
         print("Opcion incorrecta")
+
+    if opcion == "3":
+        return
 
     if opcion == "1":
         print("Faltas totales: {}/{}".format(_horas_faltadas(), sum(todas.values())))
@@ -103,6 +111,8 @@ def consultar():
             _aviso_limite(nombre, _horas_faltadas(nombre), total)
     else:
         nombre = _elegir_asignatura("Introduce que asignatura quieres consultar: ")
+        if nombre is None:
+            return
         faltas = _horas_faltadas(nombre)
         print("{}: {}/{}".format(nombre, faltas, todas[nombre]))
         _aviso_limite(nombre, faltas, todas[nombre])

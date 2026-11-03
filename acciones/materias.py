@@ -21,6 +21,7 @@ def _tabla(cabeceras, filas):
 def _elegir(cabeceras, filas, pregunta):
     """Muestra la tabla de 5 en 5 (flechas para cambiar de pagina) y devuelve la fila elegida.
     El usuario escribe el contenido de la primera columna (sin el punto final, si lo tiene)."""
+    abortar = int(str(filas[-1][0]).rstrip(".")) + 1  # numero inmediatamente posterior a la ultima opcion
     paginas = (len(filas) - 1) // POR_PAGINA + 1
     pagina = 0
     escrito = ""
@@ -31,6 +32,7 @@ def _elegir(cabeceras, filas, pregunta):
         inicio = pagina * POR_PAGINA
         print(_tabla(cabeceras, filas[inicio:inicio + POR_PAGINA]))
         print("Pagina {}/{} (usa las flechas para cambiar de pagina)".format(pagina + 1, paginas))
+        print("{}. Abortar".format(abortar))
         if aviso:
             print(aviso)
             aviso = ""
@@ -50,6 +52,9 @@ def _elegir(cabeceras, filas, pregunta):
             elif flecha in ("M", "P"):
                 pagina = min(pagina + 1, paginas - 1)
         elif tecla == "\r":
+            if escrito == str(abortar):
+                print()
+                return None
             for fila in filas:
                 if str(fila[0]).rstrip(".") == escrito:
                     print()
@@ -119,7 +124,7 @@ def _crear(nombre, horas):
 def _elegir_asignatura(pregunta):
     filas = [("{}.".format(i), nombre, horas) for i, (nombre, horas) in enumerate(_leer_asignaturas().items(), start=1)]
     fila = _elegir(["N.", "Asignatura", "Horas"], filas, pregunta)
-    return fila[1], fila[2]
+    return None if fila is None else (fila[1], fila[2])
 
 
 def _renombrar(nombre, nuevo):
@@ -170,8 +175,8 @@ def materias():
         os.system("cls")
         opcion = _pedir_opcion(
             "1. Crear asignatura\n2. Eliminar asignatura\n3. Cambiar nombre\n4. Cambiar horas\n5. Volver\n"
-            "Elige una opcion: ", ("1", "2", "3", "4", "5"))
-        if opcion == "5":
+            "6. Abortar\nElige una opcion: ", ("1", "2", "3", "4", "5", "6"))
+        if opcion in ("5", "6"):
             return
 
         if opcion == "1":
@@ -180,7 +185,10 @@ def materias():
             if len(_leer_asignaturas()) == 1:
                 print("No puedes eliminar la unica asignatura que hay")
             else:
-                nombre, _ = _elegir_asignatura("Elige la asignatura a eliminar (N.): ")
+                elegida = _elegir_asignatura("Elige la asignatura a eliminar (N.): ")
+                if elegida is None:
+                    return
+                nombre, _ = elegida
                 faltas = _contar_faltas(nombre)
                 if _pedir_si_no("¿Seguro que quieres eliminar {}? Se borraran tambien sus {} faltas (S/N): "
                                 .format(nombre, faltas)):
@@ -189,11 +197,17 @@ def materias():
                 else:
                     print("No se ha eliminado la asignatura")
         elif opcion == "3":
-            nombre, _ = _elegir_asignatura("Elige la asignatura a renombrar (N.): ")
+            elegida = _elegir_asignatura("Elige la asignatura a renombrar (N.): ")
+            if elegida is None:
+                return
+            nombre, _ = elegida
             _renombrar(nombre, _pedir_nombre("Nuevo nombre: ", ignorar=nombre))
             print("Nombre cambiado")
         else:
-            nombre, _ = _elegir_asignatura("Elige la asignatura a la que cambiar las horas (N.): ")
+            elegida = _elegir_asignatura("Elige la asignatura a la que cambiar las horas (N.): ")
+            if elegida is None:
+                return
+            nombre, _ = elegida
             _cambiar_horas(nombre, _pedir_horas())
             print("Horas cambiadas")
 

@@ -4,7 +4,7 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
-DB_PATH = Path(__file__).resolve().parent.parent / "faltas.db"
+DB_PATH = Path(__file__).resolve().parent.parent / "database.db"
 
 
 @contextmanager

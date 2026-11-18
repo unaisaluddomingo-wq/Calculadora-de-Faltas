@@ -117,3 +117,4 @@ def añadir():
         )
     print("Falta de asistencia registrada")
     input("Pulsa enter para continuar")
+

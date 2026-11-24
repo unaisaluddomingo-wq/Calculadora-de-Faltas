@@ -1,0 +1,695 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora de Faltas</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='1' width='6' height='6' rx='1' fill='%232343C4'/%3E%3Crect x='9' y='1' width='6' height='6' rx='1' fill='%232343C4'/%3E%3Crect x='1' y='9' width='6' height='6' rx='1' fill='%232343C4'/%3E%3Crect x='9.5' y='9.5' width='5' height='5' rx='1' fill='none' stroke='%232343C4'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700&display=swap">
+<style>
+/* Una columna de cuaderno (max 880px); la pieza principal es la cuadricula de horas de cada asignatura.
+   Si no hay internet, la fuente cae a Segoe UI y todo sigue funcionando. */
+:root {
+  --paper: #F5F7FA;
+  --surface: #FFFFFF;
+  --ink: #18233B;
+  --muted: #5A6781;
+  --line: #DCE2EB;
+  --pen: #2343C4;        /* boli azul: acento y horas faltadas */
+  --on-pen: #FFFFFF;
+  --pen-soft: #E8ECFB;
+  --warn: #9C6208;       /* mitad del margen gastado */
+  --red: #C2272B;        /* boli rojo: cerca o por encima del limite */
+  --red-soft: #FBE7E7;
+  --empty: #EDF0F5;
+  --empty-line: #CBD3DF;
+  --scrim: rgba(16, 24, 40, .38);
+  --font: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --t-xs: .8125rem; --t-sm: .875rem; --t-base: 1rem; --t-lg: 1.25rem; --t-xl: 2rem;
+  --r-sm: 6px; --r-md: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0E1320; --surface: #151B2A; --ink: #E4E9F2; --muted: #96A2B8; --line: #262F44;
+    --pen: #8FA3FF; --on-pen: #0E1320; --pen-soft: #1E2847; --warn: #E2A84C;
+    --red: #FF7C79; --red-soft: #391A1D; --empty: #1A2132; --empty-line: #303A52; --scrim: rgba(0,0,0,.55);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--paper); color: var(--ink); font-family: var(--font); font-size: var(--t-base); line-height: 1.5; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+p { margin: 0; }
+[hidden] { display: none !important; }
+.num, td, .count { font-variant-numeric: tabular-nums; }
+
+.wrap { max-width: 880px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+@media (max-width: 480px) { .wrap { padding-left: 16px; padding-right: 16px; } }
+
+/* Cabecera */
+.top { border-bottom: 1px solid var(--line); background: var(--surface); }
+.top .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; padding-block: 14px; }
+.brand { font-weight: 700; margin-right: auto; }
+nav { display: flex; gap: 4px; overflow-x: auto; order: 3; width: 100%; margin-bottom: -15px; }
+nav button { border: 0; background: none; padding: 8px 12px 12px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
+nav button:hover { color: var(--ink); }
+nav button[aria-current="page"] { color: var(--ink); border-bottom-color: var(--pen); font-weight: 500; }
+
+.btn { display: inline-flex; align-items: center; gap: 8px; border-radius: var(--r-sm); padding: 8px 16px; border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 500; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--pen); border-color: var(--pen); color: var(--on-pen); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.danger { background: var(--red); border-color: var(--red); color: var(--on-pen); }
+.btn.small { padding: 4px 10px; font-size: var(--t-sm); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.link { border: 0; background: none; padding: 4px 6px; color: var(--pen); cursor: pointer; font-size: var(--t-sm); border-radius: 4px; }
+.link:hover { text-decoration: underline; }
+.link.red { color: var(--red); }
+.link:disabled { color: var(--muted); cursor: not-allowed; text-decoration: none; }
+
+main { padding-block: 32px 64px; display: grid; gap: 28px; }
+main > * { min-width: 0; }
+
+/* Resumen */
+.note { display: flex; gap: 10px; align-items: baseline; }
+.note::before { content: ""; flex: none; width: 10px; height: 10px; border-radius: 2px; background: var(--pen); transform: translateY(1px); }
+.note.warn::before { background: var(--warn); }
+.note.alert::before { background: var(--red); }
+.total { font-size: var(--t-xl); font-weight: 700; line-height: 1.15; letter-spacing: -.01em; }
+.total .of { color: var(--muted); font-weight: 400; }
+.sub { color: var(--muted); max-width: 62ch; margin-top: 6px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: var(--t-sm); color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+
+.subjects { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.subjects li { border-bottom: 1px solid var(--line); }
+.subj { --c: var(--pen); display: grid; gap: 10px; width: 100%; text-align: left; border: 0; background: none; padding: 16px 8px; cursor: pointer; }
+.subj:hover { background: var(--surface); }
+.subj.st-warn { --c: var(--warn); }
+.subj.st-alert, .subj.st-over { --c: var(--red); }
+.subj-top, .subj-foot { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+.subj-name { font-weight: 500; }
+.subj-name .n { color: var(--muted); font-weight: 400; margin-right: 2px; }
+.count { color: var(--muted); font-size: var(--t-sm); white-space: nowrap; }
+.count b { color: var(--ink); font-size: var(--t-lg); font-weight: 700; }
+.subj-foot { font-size: var(--t-sm); color: var(--muted); }
+.state { font-weight: 500; }
+.st-warn .state { color: var(--warn); }
+.st-alert .state, .st-over .state { color: var(--red); }
+
+.cells { display: flex; flex-wrap: wrap; gap: 3px; }
+.cell { width: 13px; height: 13px; border-radius: 2px; background: var(--empty); box-shadow: inset 0 0 0 1px var(--empty-line); }
+.cell.u { background: var(--c); box-shadow: none; }
+.cell.j { background: repeating-linear-gradient(135deg, var(--c) 0 2px, transparent 2px 4.5px); box-shadow: inset 0 0 0 1.5px var(--c); }
+.cell.x { --c: var(--red); outline: 1px solid var(--red); outline-offset: 1px; }
+.cell.sample { --c: var(--pen); }
+.cell.new { animation: pop .38s cubic-bezier(.2,.9,.3,1.3) both; }
+@keyframes pop { from { transform: scale(.2); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .cell.new { animation: none; } }
+
+/* Tablas */
+.section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; }
+.section-head h1 { font-size: var(--t-lg); }
+.section-head p { color: var(--muted); font-size: var(--t-sm); }
+.field-inline { display: flex; align-items: center; gap: 8px; font-size: var(--t-sm); color: var(--muted); }
+.table-box { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { font-weight: 500; color: var(--muted); background: var(--paper); }
+tbody tr:last-child td { border-bottom: 0; }
+td.r, th.r { text-align: right; }
+tr.pick { cursor: pointer; }
+tr.pick:hover td { background: var(--pen-soft); }
+tr.selected td { background: var(--pen-soft); }
+tr.row-actions td { background: var(--pen-soft); white-space: normal; padding-top: 0; }
+.row-actions .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.row-actions .bar p { flex: 1 1 280px; }
+.row-actions.danger td { background: var(--red-soft); }
+.jus-no { color: var(--muted); }
+.muted { color: var(--muted); }
+
+.pager { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: var(--t-sm); color: var(--muted); }
+.pager .ctrls { display: flex; gap: 6px; align-items: center; }
+.pager .ctrls span { min-width: 7.5em; text-align: center; color: var(--ink); }
+.icon-btn { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--surface); cursor: pointer; }
+.icon-btn:disabled { opacity: .4; cursor: not-allowed; }
+.icon-btn svg { width: 16px; height: 16px; }
+kbd { font-family: inherit; font-size: var(--t-xs); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; background: var(--surface); color: var(--ink); }
+
+.empty { padding: 40px 20px; display: grid; gap: 12px; justify-items: start; }
+.empty h2 { font-size: var(--t-lg); }
+.empty p { color: var(--muted); max-width: 52ch; }
+
+/* Formularios */
+.field { display: grid; gap: 6px; }
+.field label, .field legend { font-weight: 500; font-size: var(--t-sm); padding: 0; }
+.field .hint { color: var(--muted); font-size: var(--t-xs); }
+.input { border: 1px solid var(--empty-line); background: var(--surface); border-radius: var(--r-sm); padding: 8px 10px; width: 100%; min-width: 0; }
+.input[aria-invalid="true"] { border-color: var(--red); }
+.error { color: var(--red); font-size: var(--t-xs); }
+.error:empty { display: none; }
+.suffix { display: flex; align-items: center; gap: 8px; }
+.suffix .input { width: 6.5em; }
+fieldset { border: 0; margin: 0; padding: 0; }
+.seg { display: inline-flex; border: 1px solid var(--empty-line); border-radius: var(--r-sm); overflow: hidden; }
+.seg label { padding: 7px 18px; cursor: pointer; font-weight: 400; font-size: var(--t-base); }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label:has(input:checked) { background: var(--pen); color: var(--on-pen); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--pen); outline-offset: -2px; }
+.inline-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; white-space: normal; }
+.inline-form .input { width: auto; flex: 1 1 140px; padding: 4px 8px; }
+.inline-form .input.short { flex: 0 0 6em; }
+.new-subj { display: grid; grid-template-columns: minmax(0, 1fr) 9em auto; gap: 12px; align-items: start; }
+.new-subj .btn { margin-top: 27px; }
+@media (max-width: 560px) { .new-subj { grid-template-columns: 1fr; } .new-subj .btn { margin-top: 0; justify-self: start; } }
+
+/* Panel lateral para añadir/editar falta */
+dialog.sheet { margin: 0 0 0 auto; height: 100%; max-height: 100%; width: min(420px, 100%); max-width: 100%; border: 0; border-left: 1px solid var(--line); padding: 0; background: var(--surface); color: var(--ink); }
+dialog.sheet::backdrop { background: var(--scrim); }
+dialog.sheet[open] { animation: slide .22s ease-out; }
+@keyframes slide { from { transform: translateX(24px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { dialog.sheet[open] { animation: none; } }
+.sheet form { display: grid; gap: 20px; padding: 24px; }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; }
+.sheet-head h2 { font-size: var(--t-lg); }
+.sheet .actions { display: flex; gap: 8px; padding-top: 4px; }
+
+/* Curso */
+.block { display: grid; gap: 10px; padding-block: 20px; border-top: 1px solid var(--line); }
+.block h2 { font-size: var(--t-base); }
+.block p { color: var(--muted); max-width: 62ch; }
+.block .big { font-size: var(--t-xl); font-weight: 700; color: var(--ink); line-height: 1.2; }
+.confirm { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--red); border-radius: var(--r-md); background: var(--red-soft); max-width: 62ch; }
+.confirm p { color: var(--ink); }
+.confirm .bar { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Primer inicio y pantallas sueltas */
+.setup { max-width: 520px; display: grid; gap: 24px; }
+.setup .step { color: var(--muted); font-size: var(--t-sm); }
+.setup h1 { font-size: var(--t-xl); line-height: 1.15; }
+.setup p.lead { color: var(--muted); }
+.added { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.added li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--ink); color: var(--paper); padding: 10px 18px; border-radius: var(--r-sm); font-size: var(--t-sm); font-weight: 500; z-index: 20; max-width: calc(100% - 32px); }
+.toast.bad { background: var(--red); color: var(--on-pen); }
+</style>
+</head>
+<body>
+
+<header class="top" id="top" hidden>
+  <div class="wrap">
+    <div class="brand">Calculadora de Faltas</div>
+    <button type="button" class="btn primary" data-action="open-add">Añadir falta</button>
+    <nav aria-label="Secciones">
+      <button type="button" data-action="nav" data-view="resumen">Resumen</button>
+      <button type="button" data-action="nav" data-view="faltas">Faltas</button>
+      <button type="button" data-action="nav" data-view="asignaturas">Asignaturas</button>
+      <button type="button" data-action="nav" data-view="curso">Curso</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap" id="main"></main>
+
+<dialog class="sheet" id="sheet" aria-labelledby="sheet-title">
+  <form id="form-falta" novalidate>
+    <div class="sheet-head">
+      <h2 id="sheet-title">Añadir falta</h2>
+      <button type="button" class="icon-btn" data-action="close-sheet" aria-label="Cerrar">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+      </button>
+    </div>
+    <div class="field">
+      <label for="f-asig">Asignatura</label>
+      <select class="input" id="f-asig"></select>
+    </div>
+    <div class="field">
+      <label for="f-fecha">Fecha</label>
+      <input class="input" type="date" id="f-fecha" aria-describedby="e-fecha">
+      <span class="error" id="e-fecha"></span>
+    </div>
+    <div class="field">
+      <label for="f-horas">Horas que has faltado</label>
+      <div class="suffix"><input class="input" type="number" id="f-horas" min="1" max="24" step="1" inputmode="numeric" aria-describedby="e-horas"><span class="muted">h</span></div>
+      <span class="error" id="e-horas"></span>
+    </div>
+    <fieldset class="field">
+      <legend>¿Está justificada?</legend>
+      <div class="seg">
+        <label><input type="radio" name="f-just" id="f-just-no" value="0" checked>No</label>
+        <label><input type="radio" name="f-just" id="f-just-si" value="1">Sí</label>
+      </div>
+      <span class="hint">Las justificadas también cuentan para el límite.</span>
+    </fieldset>
+    <p class="error" id="e-form" role="alert"></p>
+    <div class="actions">
+      <button type="submit" class="btn primary" id="f-submit">Guardar falta</button>
+      <button type="button" class="btn" data-action="close-sheet">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+(function () {
+  var POR_PAGINA = 5;
+  var hoy = (function () { var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); })();
+
+  /* D: datos de la base de datos (los manda el servidor). S: estado de la pantalla. */
+  var D = null;
+  var S = { modo: "cargando", vista: "resumen", filtro: "", pagF: 0, pagA: 0, sel: null, borrarF: null, editA: null, borrarA: null,
+            terminar: false, editLimite: false, flash: null, editando: null, setup: null, ocupado: false };
+
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(t) { return String(t).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function fecha(iso) { var p = iso.split("-"); return new Date(+p[0], p[1] - 1, +p[2]).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric" }); }
+  function pct(n) { return n.toLocaleString("es-ES", { maximumFractionDigits: 1 }); }
+  function buscarAsig(nombre) { for (var i = 0; i < D.asignaturas.length; i++) if (D.asignaturas[i].nombre === nombre) return D.asignaturas[i]; return null; }
+
+  /* ---------- Servidor ---------- */
+  function api(ruta, datos) {
+    return fetch(ruta, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(datos || {}) })
+      .catch(function () { throw new Error("No se puede conectar con la app. Ciérrala y vuelve a abrirla con python app.py."); })
+      .then(function (r) {
+        return r.json().then(function (j) {
+          if (!r.ok) throw new Error(j.error || "No se ha podido guardar");
+          return j;
+        });
+      });
+  }
+
+  function aplicar(estado) {
+    D = estado;
+    if (!estado.configurado) {
+      if (S.modo !== "setup") S.setup = { paso: 1, limite: estado.limite || 20, asignaturas: [] };
+      S.modo = "setup";
+    } else if (S.modo !== "app") {
+      S.modo = "app";
+    }
+  }
+
+  function cargar() {
+    fetch("/api/estado")
+      .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+      .then(function (e) { aplicar(e); render(); })
+      .catch(function () { S.modo = "sin-conexion"; render(); });
+  }
+
+  /* ---------- Calculos (mismos umbrales que sugerencia.py y consultar.py) ---------- */
+  function datos(a) {
+    var usadas = 0, just = 0;
+    D.faltas.forEach(function (f) { if (f.asignatura === a.nombre) { usadas += f.horas; if (f.justificada) just += f.horas; } });
+    var permitidas = Math.floor(a.horas * D.limite / 100);
+    var est = "ok";
+    if (usadas * 100 > D.limite * a.horas) est = "over";
+    else if (usadas * 10000 >= D.limite * 80 * a.horas) est = "alert";
+    else if (usadas * 10000 >= D.limite * 50 * a.horas) est = "warn";
+    return { usadas: usadas, just: just, permitidas: permitidas, est: est, quedan: Math.max(permitidas - usadas, 0) };
+  }
+
+  function celdas(a, d) {
+    var n = Math.max(d.permitidas, d.usadas), sin = d.usadas - d.just, h = "";
+    var desde = S.flash && S.flash.asignatura === a.nombre ? d.usadas - S.flash.horas : Infinity;
+    for (var i = 0; i < n; i++) {
+      var c = "cell";
+      if (i < sin) c += " u"; else if (i < d.usadas) c += " j";
+      if (i >= d.permitidas && i < d.usadas) c += " x";
+      var nueva = i >= desde && i < d.usadas;
+      if (nueva) c += " new";
+      h += '<i class="' + c + '"' + (nueva ? ' style="animation-delay:' + ((i - desde) * 60) + 'ms"' : "") + '></i>';
+    }
+    return '<div class="cells" role="img" aria-label="' + d.usadas + ' de ' + d.permitidas + ' horas permitidas">' + h + "</div>";
+  }
+
+  function estadoTexto(d) {
+    if (d.est === "over") return "Límite superado: asignatura suspendida";
+    if (d.permitidas === d.usadas) return "No puedes faltar ni una hora más";
+    if (d.est === "alert") return "Solo te quedan " + d.quedan + " h";
+    return "Te quedan " + d.quedan + " h";
+  }
+
+  function nota() {
+    // la asignatura en peor situacion (la que ha gastado mas parte de su limite)
+    var peor = null;
+    D.asignaturas.forEach(function (a) {
+      var d = datos(a), parte = d.usadas / (a.horas * D.limite / 100);
+      if (d.est !== "ok" && (!peor || parte > peor.parte)) peor = { a: a, d: d, parte: parte };
+    });
+    if (!peor) return '<p class="note">Vas muy bien con tus faltas. Sigue así.</p>';
+    var a = peor.a, d = peor.d, p = pct(d.usadas / a.horas * 100);
+    if (d.est === "over") return '<p class="note alert">Has superado el límite en ' + esc(a.nombre) + ": llevas el " + p + " % de sus horas y el máximo es el " + D.limite + " %.</p>";
+    if (d.est === "alert") return '<p class="note alert">Cuidado con ' + esc(a.nombre) + ": ya has faltado el " + p + " % de sus horas y el límite es el " + D.limite + " %.</p>";
+    return '<p class="note warn">Ojo con ' + esc(a.nombre) + ": ya has gastado la mitad de las horas que puedes faltar.</p>";
+  }
+
+  /* ---------- Vistas ---------- */
+  var vistas = {};
+
+  vistas.resumen = function () {
+    var total = 0, faltadas = 0;
+    D.asignaturas.forEach(function (a) { total += a.horas; });
+    D.faltas.forEach(function (f) { faltadas += f.horas; });
+    var filas = D.asignaturas.map(function (a, i) {
+      var d = datos(a);
+      return '<li><button type="button" class="subj st-' + d.est + '" data-action="ver-asig" data-nombre="' + esc(a.nombre) + '">' +
+        '<span class="subj-top"><span class="subj-name"><span class="n">' + (i + 1) + '.</span> ' + esc(a.nombre) + '</span>' +
+        '<span class="count"><b>' + d.usadas + '</b> de ' + d.permitidas + ' h</span></span>' + celdas(a, d) +
+        '<span class="subj-foot"><span>' + a.horas + ' h de curso, puedes faltar el ' + D.limite + ' %</span><span class="state">' + estadoTexto(d) + '</span></span>' +
+        '</button></li>';
+    }).join("");
+    S.flash = null;
+    return '<section style="display:grid;gap:20px">' + nota() +
+      '<div><h1 class="total"><span class="num">' + faltadas + '</span> <span class="of">de ' + total.toLocaleString("es-ES") + ' horas faltadas</span></h1>' +
+      '<p class="sub">Cada cuadrado es una hora que puedes faltar en esa asignatura sin suspenderla. Pulsa una asignatura para ver sus faltas.</p></div>' +
+      '<div class="legend"><span><i class="cell u sample"></i>Sin justificar</span><span><i class="cell j sample"></i>Justificada</span><span><i class="cell"></i>Te queda</span></div>' +
+      '</section><ul class="subjects">' + filas + '</ul>';
+  };
+
+  function pager(pag, paginas, clave) {
+    return '<div class="pager"><div class="ctrls">' +
+      '<button type="button" class="icon-btn" data-action="pag" data-k="' + clave + '" data-d="-1" aria-label="Página anterior"' + (pag === 0 ? " disabled" : "") + '><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></button>' +
+      '<span>Página ' + (pag + 1) + ' de ' + paginas + '</span>' +
+      '<button type="button" class="icon-btn" data-action="pag" data-k="' + clave + '" data-d="1" aria-label="Página siguiente"' + (pag >= paginas - 1 ? " disabled" : "") + '><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg></button>' +
+      '</div><span>También con las flechas <kbd>←</kbd> <kbd>→</kbd> del teclado</span></div>';
+  }
+
+  vistas.faltas = function () {
+    if (S.filtro && !buscarAsig(S.filtro)) S.filtro = "";
+    var lista = D.faltas.filter(function (f) { return !S.filtro || f.asignatura === S.filtro; }).sort(function (a, b) { return b.id - a.id; });
+    var paginas = Math.max(1, Math.ceil(lista.length / POR_PAGINA));
+    S.pagF = Math.max(0, Math.min(S.pagF, paginas - 1));
+    var opts = '<option value="">Todas las asignaturas</option>' + D.asignaturas.map(function (a, i) {
+      return '<option value="' + esc(a.nombre) + '"' + (a.nombre === S.filtro ? " selected" : "") + '>' + (i + 1) + '. ' + esc(a.nombre) + '</option>';
+    }).join("");
+    var cab = '<div class="section-head"><div><h1>Faltas registradas</h1><p>Pulsa una falta para editarla o borrarla.</p></div>' +
+      '<label class="field-inline" for="filtro">Ver<select class="input" id="filtro" style="width:auto">' + opts + '</select></label></div>';
+
+    if (!D.faltas.length) {
+      return cab + '<div class="table-box"><div class="empty"><h2>Todavía no hay faltas</h2><p>Cuando faltes a clase, apúntalo aquí para saber cuántas horas te quedan en cada asignatura.</p><button type="button" class="btn primary" data-action="open-add">Añadir falta</button></div></div>';
+    }
+    var resumen = "";
+    if (S.filtro) {
+      var a = buscarAsig(S.filtro), d = datos(a);
+      resumen = '<p class="muted">' + esc(S.filtro) + ': <strong style="color:var(--ink)">' + d.usadas + ' de ' + a.horas + ' h</strong> faltadas (' + pct(d.usadas / a.horas * 100) + ' %). Límite: ' + d.permitidas + ' h.</p>';
+      if (!lista.length) return cab + resumen + '<div class="table-box"><div class="empty"><h2>Sin faltas en ' + esc(S.filtro) + '</h2><p>No has faltado nunca a esta asignatura.</p><button type="button" class="btn" data-action="clear-filter">Ver todas las faltas</button></div></div>';
+    }
+    var trozo = lista.slice(S.pagF * POR_PAGINA, S.pagF * POR_PAGINA + POR_PAGINA);
+    var filas = trozo.map(function (f) {
+      var sel = S.sel === f.id;
+      var h = '<tr class="pick' + (sel ? " selected" : "") + '" data-action="sel" data-id="' + f.id + '" tabindex="0" aria-expanded="' + sel + '">' +
+        '<td class="r muted">' + f.id + '</td><td>' + esc(f.asignatura) + '</td><td>' + fecha(f.fecha) + '</td><td class="r">' + f.horas + ' h</td>' +
+        '<td' + (f.justificada ? "" : ' class="jus-no"') + '>' + (f.justificada ? "Sí" : "No") + '</td></tr>';
+      if (sel && S.borrarF === f.id) {
+        h += '<tr class="row-actions danger"><td colspan="5"><div class="bar"><p>¿Borrar la falta ' + f.id + ' de ' + esc(f.asignatura) + ' (' + f.horas + ' h, ' + fecha(f.fecha) + ')? No se puede deshacer.</p>' +
+          '<button type="button" class="btn danger small" data-action="del-falta" data-id="' + f.id + '">Borrar falta</button><button type="button" class="btn small" data-action="cancel-del">Cancelar</button></div></td></tr>';
+      } else if (sel) {
+        h += '<tr class="row-actions"><td colspan="5"><div class="bar"><button type="button" class="btn small" data-action="edit-falta" data-id="' + f.id + '">Editar</button>' +
+          '<button type="button" class="link red" data-action="ask-del" data-id="' + f.id + '">Borrar</button></div></td></tr>';
+      }
+      return h;
+    }).join("");
+    return cab + resumen + '<div class="table-box"><table><thead><tr><th class="r">ID</th><th>Asignatura</th><th>Fecha</th><th class="r">Horas</th><th>Justificada</th></tr></thead><tbody>' + filas + '</tbody></table></div>' +
+      pager(S.pagF, paginas, "F");
+  };
+
+  vistas.asignaturas = function () {
+    var paginas = Math.max(1, Math.ceil(D.asignaturas.length / POR_PAGINA));
+    S.pagA = Math.max(0, Math.min(S.pagA, paginas - 1));
+    var unica = D.asignaturas.length === 1;
+    var filas = D.asignaturas.slice(S.pagA * POR_PAGINA, S.pagA * POR_PAGINA + POR_PAGINA).map(function (a, k) {
+      var n = S.pagA * POR_PAGINA + k + 1, d = datos(a), e = S.editA && S.editA.nombre === a.nombre ? S.editA.campo : null;
+      var nombre = e === "nombre"
+        ? '<form class="inline-form" id="form-edit-a" novalidate><input class="input" id="ea-nombre" value="' + esc(a.nombre) + '" maxlength="60" aria-label="Nuevo nombre" aria-describedby="ea-err"><button class="btn primary small" type="submit">Guardar nombre</button><button class="btn small" type="button" data-action="cancel-edit-a">Cancelar</button><span class="error" id="ea-err" style="flex-basis:100%"></span></form>'
+        : esc(a.nombre);
+      var horas = e === "horas"
+        ? '<form class="inline-form" id="form-edit-a" novalidate><input class="input short" id="ea-horas" type="number" min="1" max="800" value="' + a.horas + '" aria-label="Horas del curso" aria-describedby="ea-err"><button class="btn primary small" type="submit">Guardar horas</button><button class="btn small" type="button" data-action="cancel-edit-a">Cancelar</button><span class="error" id="ea-err" style="flex-basis:100%"></span></form>'
+        : a.horas + ' h';
+      var h = '<tr><td class="r muted">' + n + '.</td><td>' + nombre + '</td><td class="r">' + horas + '</td><td class="r">' + d.permitidas + ' h</td><td class="r">' + d.usadas + ' h</td>' +
+        '<td class="r">' + (e ? "" : '<button type="button" class="link" data-action="edit-a" data-campo="nombre" data-nombre="' + esc(a.nombre) + '">Renombrar</button>' +
+        '<button type="button" class="link" data-action="edit-a" data-campo="horas" data-nombre="' + esc(a.nombre) + '">Cambiar horas</button>' +
+        '<button type="button" class="link red" data-action="ask-del-a" data-nombre="' + esc(a.nombre) + '"' + (unica ? ' disabled title="Tiene que haber al menos una asignatura"' : "") + '>Eliminar</button>') + '</td></tr>';
+      if (S.borrarA === a.nombre) {
+        var nf = D.faltas.filter(function (f) { return f.asignatura === a.nombre; }).length;
+        h += '<tr class="row-actions danger"><td colspan="6"><div class="bar" style="padding-top:10px"><p>¿Eliminar ' + esc(a.nombre) + '? ' + (nf ? "También se borrarán sus " + nf + (nf === 1 ? " falta." : " faltas.") : "No tiene faltas registradas.") + '</p>' +
+          '<button type="button" class="btn danger small" data-action="del-a" data-nombre="' + esc(a.nombre) + '">Eliminar asignatura</button><button type="button" class="btn small" data-action="cancel-del-a">Cancelar</button></div></td></tr>';
+      }
+      return h;
+    }).join("");
+    return '<div class="section-head"><div><h1>Asignaturas</h1><p>Las horas son las de todo el curso. Al renombrar una asignatura también se actualizan sus faltas.</p></div></div>' +
+      '<div class="table-box"><table><thead><tr><th class="r">N.</th><th>Asignatura</th><th class="r">Horas del curso</th><th class="r">Puedes faltar</th><th class="r">Faltadas</th><th class="r"><span class="muted" style="font-weight:400">Acciones</span></th></tr></thead><tbody>' + filas + '</tbody></table></div>' +
+      pager(S.pagA, paginas, "A") +
+      (unica ? '<p class="muted" style="font-size:var(--t-sm)">No puedes eliminar la única asignatura que hay.</p>' : "") +
+      '<form class="new-subj" id="form-new-a" novalidate style="border-top:1px solid var(--line);padding-top:24px">' +
+      '<div class="field"><label for="na-nombre">Nueva asignatura</label><input class="input" id="na-nombre" maxlength="60" aria-describedby="na-e1"><span class="error" id="na-e1"></span></div>' +
+      '<div class="field"><label for="na-horas">Horas del curso</label><input class="input" id="na-horas" type="number" min="1" max="800" inputmode="numeric" aria-describedby="na-e2"><span class="error" id="na-e2"></span></div>' +
+      '<button class="btn" type="submit">Crear asignatura</button></form>';
+  };
+
+  vistas.curso = function () {
+    var nf = D.faltas.length, na = D.asignaturas.length;
+    var limite = S.editLimite
+      ? '<form class="inline-form" id="form-limite" novalidate style="max-width:520px"><div class="suffix"><input class="input" id="lim-pct" type="number" min="1" max="100" value="' + D.limite + '" inputmode="numeric" aria-label="Nuevo porcentaje máximo" aria-describedby="lim-err"><span class="muted">%</span></div>' +
+        '<button class="btn primary small" type="submit">Guardar límite</button><button class="btn small" type="button" data-action="cancel-limite">Cancelar</button><span class="error" id="lim-err" style="flex-basis:100%"></span></form>'
+      : '<p class="big">' + D.limite + ' %</p>';
+    return '<div class="section-head"><h1>Curso</h1></div>' +
+      '<section class="block"><h2>Límite de faltas</h2>' + limite +
+      '<p>de las horas de cada asignatura. Si lo superas en una asignatura, la suspendes. Cámbialo si tu centro usa otro porcentaje.</p>' +
+      (S.editLimite ? "" : '<div><button type="button" class="btn" data-action="edit-limite">Cambiar límite</button></div>') + '</section>' +
+      '<section class="block"><h2>Terminar el año escolar</h2><p>Borra todas tus asignaturas y faltas y cierra la app. La próxima vez que la abras empezarás de cero, eligiendo el límite y tus asignaturas.</p>' +
+      (S.terminar
+        ? '<div class="confirm"><p>Se borrarán ' + na + (na === 1 ? ' asignatura y ' : ' asignaturas y ') + nf + (nf === 1 ? ' falta' : ' faltas') + '. Esto no se puede deshacer.</p><div class="bar"><button type="button" class="btn danger" data-action="terminar">Borrar todo y cerrar</button><button type="button" class="btn" data-action="cancel-terminar">Cancelar</button></div></div>'
+        : '<div><button type="button" class="btn" data-action="ask-terminar" style="color:var(--red)">Terminar año escolar</button></div>') +
+      '</section>';
+  };
+
+  function vistaSetup() {
+    var st = S.setup;
+    if (st.paso === 1) {
+      return '<form class="setup" id="form-setup-1" novalidate><p class="step">Paso 1 de 2</p><h1>¿Qué porcentaje de horas puedes faltar?</h1>' +
+        '<p class="lead">Es el máximo de horas que puedes faltar en cada asignatura antes de suspenderla. Lo pone tu centro; en muchos es el 20 %.</p>' +
+        '<div class="field"><label for="su-pct">Porcentaje máximo</label><div class="suffix"><input class="input" id="su-pct" type="number" min="1" max="100" value="' + st.limite + '" inputmode="numeric" aria-describedby="su-e"><span class="muted">%</span></div><span class="error" id="su-e"></span></div>' +
+        '<div><button class="btn primary" type="submit">Continuar</button></div></form>';
+    }
+    var lista = st.asignaturas.map(function (a, i) {
+      return '<li><span><span class="muted">' + (i + 1) + '.</span> ' + esc(a.nombre) + ' <span class="muted">' + a.horas + ' h</span></span><button type="button" class="link red" data-action="setup-quitar" data-i="' + i + '">Quitar</button></li>';
+    }).join("");
+    return '<div class="setup"><p class="step">Paso 2 de 2</p><h1>Añade tus asignaturas</h1>' +
+      '<p class="lead">Escribe cada asignatura con sus horas de todo el curso. Necesitas al menos una para empezar; después puedes añadir más.</p>' +
+      '<form class="new-subj" id="form-setup-2" novalidate>' +
+      '<div class="field"><label for="na-nombre">Nombre</label><input class="input" id="na-nombre" maxlength="60" aria-describedby="na-e1"><span class="error" id="na-e1"></span></div>' +
+      '<div class="field"><label for="na-horas">Horas</label><input class="input" id="na-horas" type="number" min="1" max="800" inputmode="numeric" aria-describedby="na-e2"><span class="error" id="na-e2"></span></div>' +
+      '<button class="btn" type="submit">Añadir</button></form>' +
+      (lista ? '<ul class="added">' + lista + '</ul>' : "") +
+      '<p class="error" id="su-fin-err" role="alert"></p>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn primary" data-action="setup-fin"' + (st.asignaturas.length ? "" : " disabled") + '>Empezar</button>' +
+      '<button type="button" class="btn" data-action="setup-atras">Volver al paso 1</button></div></div>';
+  }
+
+  function render() {
+    var app = S.modo === "app";
+    $("top").hidden = !app;
+    document.querySelectorAll("nav button").forEach(function (b) { if (b.dataset.view === S.vista) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+    var main = $("main");
+    if (S.modo === "cargando") main.innerHTML = "";
+    else if (S.modo === "sin-conexion") main.innerHTML = '<div class="setup"><h1>La app no está abierta</h1><p class="lead">No se puede conectar con la Calculadora de Faltas. Ábrela desde la carpeta del proyecto con <strong>python app.py</strong>.</p></div>';
+    else if (S.modo === "fin") main.innerHTML = '<div class="setup"><h1>Año escolar terminado</h1><p class="lead">Se han borrado tus asignaturas y faltas. La próxima vez que abras la app empezarás de cero. ¡Mucha suerte en tu nuevo año escolar!</p><p class="lead">Ya puedes cerrar esta ventana.</p></div>';
+    else if (S.modo === "setup") main.innerHTML = vistaSetup();
+    else main.innerHTML = vistas[S.vista]();
+  }
+
+  var tt;
+  function toast(msg, malo) {
+    var t = $("toast"); t.textContent = msg; t.className = "toast" + (malo ? " bad" : ""); t.hidden = false;
+    clearTimeout(tt); tt = setTimeout(function () { t.hidden = true; }, malo ? 5000 : 2400);
+  }
+
+  /* Envia un cambio al servidor; si sale bien redibuja con los datos nuevos, si no muestra el error */
+  function guardar(ruta, datosEnvio, alTerminar, alFallar) {
+    if (S.ocupado) return;
+    S.ocupado = true;
+    api(ruta, datosEnvio).then(function (estado) {
+      S.ocupado = false;
+      aplicar(estado);
+      if (alTerminar) alTerminar();
+      render();
+    }).catch(function (err) {
+      S.ocupado = false;
+      if (alFallar) alFallar(err.message); else toast(err.message, true);
+    });
+  }
+
+  /* ---------- Validacion (el servidor vuelve a comprobarlo todo) ---------- */
+  function setErr(input, errEl, msg) { errEl.textContent = msg || ""; if (input) input.setAttribute("aria-invalid", msg ? "true" : "false"); return !msg; }
+  function entero(v, min, max) { return /^\d+$/.test(String(v).trim()) && +v >= min && +v <= max; }
+  function errNombre(v, ignorar) {
+    v = v.trim();
+    if (!v || v.length > 60) return "Escribe un nombre de 1 a 60 caracteres.";
+    var lista = S.modo === "app" ? D.asignaturas : S.setup.asignaturas;
+    for (var i = 0; i < lista.length; i++) if (lista[i].nombre !== ignorar && lista[i].nombre.toLowerCase() === v.toLowerCase()) return "Ya tienes una asignatura llamada " + lista[i].nombre + ".";
+    return "";
+  }
+  function errHorasA(v) { return entero(v, 1, 800) ? "" : "Escribe un número de horas entre 1 y 800."; }
+  function errFecha(v) { if (!v) return "Elige la fecha de la falta."; if (v > hoy) return "La fecha no puede ser posterior a hoy."; return ""; }
+  function errHorasF(v) { return entero(v, 1, 24) ? "" : "Escribe un número de horas entre 1 y 24."; }
+  function errPct(v) { return entero(v, 1, 100) ? "" : "Escribe un porcentaje entre 1 y 100."; }
+
+  /* ---------- Panel de falta ---------- */
+  function abrirFalta(f) {
+    S.editando = f ? f.id : null;
+    $("sheet-title").textContent = f ? "Editar falta " + f.id : "Añadir falta";
+    $("f-submit").textContent = f ? "Guardar cambios" : "Guardar falta";
+    $("f-asig").innerHTML = D.asignaturas.map(function (a, i) { return '<option value="' + esc(a.nombre) + '">' + (i + 1) + '. ' + esc(a.nombre) + '</option>'; }).join("");
+    $("f-asig").value = f ? f.asignatura : (S.vista === "faltas" && S.filtro) ? S.filtro : D.asignaturas[0].nombre;
+    $("f-fecha").max = hoy;
+    $("f-fecha").value = f ? f.fecha : hoy;
+    $("f-horas").value = f ? f.horas : 1;
+    $(f && f.justificada ? "f-just-si" : "f-just-no").checked = true;
+    setErr($("f-fecha"), $("e-fecha"), ""); setErr($("f-horas"), $("e-horas"), ""); $("e-form").textContent = "";
+    $("sheet").showModal();
+    $("f-asig").focus();
+  }
+
+  $("f-fecha").addEventListener("blur", function () { setErr(this, $("e-fecha"), errFecha(this.value)); });
+  $("f-horas").addEventListener("blur", function () { setErr(this, $("e-horas"), errHorasF(this.value)); });
+  ["f-fecha", "f-horas"].forEach(function (id) {
+    $(id).addEventListener("input", function () { if (this.getAttribute("aria-invalid") === "true") setErr(this, $(id === "f-fecha" ? "e-fecha" : "e-horas"), ""); });
+  });
+
+  $("form-falta").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var ok1 = setErr($("f-fecha"), $("e-fecha"), errFecha($("f-fecha").value));
+    var ok2 = setErr($("f-horas"), $("e-horas"), errHorasF($("f-horas").value));
+    if (!ok1) { $("f-fecha").focus(); return; }
+    if (!ok2) { $("f-horas").focus(); return; }
+    var v = { asignatura: $("f-asig").value, fecha: $("f-fecha").value, horas: +$("f-horas").value, justificada: $("f-just-si").checked ? 1 : 0 };
+    var editando = S.editando;
+    if (editando) v.id = editando;
+    guardar(editando ? "/api/faltas/modificar" : "/api/faltas/nueva", v, function () {
+      $("sheet").close();
+      if (editando) { toast("Cambios guardados"); }
+      else { S.flash = { asignatura: v.asignatura, horas: v.horas }; S.vista = "resumen"; toast("Falta guardada en " + v.asignatura); }
+    }, function (msg) { $("e-form").textContent = msg; });
+  });
+
+  /* ---------- Clicks ---------- */
+  document.addEventListener("click", function (e) {
+    var el = e.target.closest("[data-action]");
+    if (!el || el.disabled) return;
+    var a = el.dataset.action;
+    switch (a) {
+      case "nav": S.vista = el.dataset.view; S.sel = null; S.borrarF = null; S.editA = null; S.borrarA = null; S.terminar = false; S.editLimite = false; break;
+      case "open-add": abrirFalta(null); return;
+      case "close-sheet": $("sheet").close(); return;
+      case "ver-asig": S.vista = "faltas"; S.filtro = el.dataset.nombre; S.pagF = 0; S.sel = null; break;
+      case "clear-filter": S.filtro = ""; S.pagF = 0; break;
+      case "pag": if (el.dataset.k === "F") { S.pagF += +el.dataset.d; S.sel = null; } else { S.pagA += +el.dataset.d; S.editA = null; S.borrarA = null; } break;
+      case "sel": S.sel = S.sel === +el.dataset.id ? null : +el.dataset.id; S.borrarF = null; break;
+      case "edit-falta": abrirFalta(D.faltas.filter(function (x) { return x.id === +el.dataset.id; })[0]); return;
+      case "ask-del": S.borrarF = +el.dataset.id; break;
+      case "cancel-del": S.borrarF = null; break;
+      case "del-falta": guardar("/api/faltas/borrar", { id: +el.dataset.id }, function () { S.sel = null; S.borrarF = null; toast("Falta borrada"); }); return;
+      case "edit-a":
+        S.editA = { nombre: el.dataset.nombre, campo: el.dataset.campo }; S.borrarA = null; render();
+        var inp = $(el.dataset.campo === "nombre" ? "ea-nombre" : "ea-horas"); inp.focus(); inp.select(); return;
+      case "cancel-edit-a": S.editA = null; break;
+      case "ask-del-a": S.borrarA = el.dataset.nombre; S.editA = null; break;
+      case "cancel-del-a": S.borrarA = null; break;
+      case "del-a":
+        var nom = el.dataset.nombre;
+        guardar("/api/asignaturas/borrar", { nombre: nom }, function () { if (S.filtro === nom) S.filtro = ""; S.borrarA = null; toast("Asignatura eliminada"); });
+        return;
+      case "edit-limite": S.editLimite = true; render(); $("lim-pct").focus(); $("lim-pct").select(); return;
+      case "cancel-limite": S.editLimite = false; break;
+      case "ask-terminar": S.terminar = true; break;
+      case "cancel-terminar": S.terminar = false; break;
+      case "terminar":
+        api("/api/terminar").then(function () { S.modo = "fin"; render(); }).catch(function (err) { toast(err.message, true); });
+        return;
+      case "setup-quitar": S.setup.asignaturas.splice(+el.dataset.i, 1); break;
+      case "setup-atras": S.setup.paso = 1; break;
+      case "setup-fin":
+        guardar("/api/configurar", { porcentaje: S.setup.limite, asignaturas: S.setup.asignaturas }, function () {
+          S.vista = "resumen"; S.filtro = ""; S.pagF = 0; S.pagA = 0; S.setup = null;
+        }, function (msg) { $("su-fin-err").textContent = msg; });
+        return;
+      default: return;
+    }
+    render();
+  });
+
+  document.addEventListener("keydown", function (e) {
+    var t = e.target;
+    if ((e.key === "Enter" || e.key === " ") && t.matches && t.matches("tr.pick")) { e.preventDefault(); t.click(); return; }
+    if ($("sheet").open || S.modo !== "app") return;
+    if (t.matches && t.matches("input, select, textarea")) return;
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    var btn = document.querySelector('[data-action="pag"][data-d="' + (e.key === "ArrowLeft" ? -1 : 1) + '"]');
+    if (btn && !btn.disabled) { e.preventDefault(); btn.click(); }
+  });
+
+  document.addEventListener("change", function (e) {
+    if (e.target.id === "filtro") { S.filtro = e.target.value; S.pagF = 0; S.sel = null; render(); }
+  });
+
+  document.addEventListener("submit", function (e) {
+    var f = e.target;
+    if (f.id === "form-falta") return;
+    e.preventDefault();
+
+    if (f.id === "form-edit-a") {
+      var actual = S.editA.nombre;
+      if (S.editA.campo === "nombre") {
+        var nuevo = $("ea-nombre").value.trim();
+        if (!setErr($("ea-nombre"), $("ea-err"), errNombre(nuevo, actual))) return;
+        guardar("/api/asignaturas/renombrar", { nombre: actual, nuevo: nuevo }, function () {
+          if (S.filtro === actual) S.filtro = nuevo; S.editA = null; toast("Nombre cambiado");
+        }, function (msg) { setErr($("ea-nombre"), $("ea-err"), msg); });
+      } else {
+        var horas = $("ea-horas").value;
+        if (!setErr($("ea-horas"), $("ea-err"), errHorasA(horas))) return;
+        guardar("/api/asignaturas/horas", { nombre: actual, horas: +horas }, function () { S.editA = null; toast("Horas cambiadas"); },
+          function (msg) { setErr($("ea-horas"), $("ea-err"), msg); });
+      }
+      return;
+    }
+
+    if (f.id === "form-new-a" || f.id === "form-setup-2") {
+      var n = $("na-nombre").value.trim(), h = $("na-horas").value;
+      var ok1 = setErr($("na-nombre"), $("na-e1"), errNombre(n)), ok2 = setErr($("na-horas"), $("na-e2"), errHorasA(h));
+      if (!ok1 || !ok2) { (ok1 ? $("na-horas") : $("na-nombre")).focus(); return; }
+      if (f.id === "form-setup-2") { S.setup.asignaturas.push({ nombre: n, horas: +h }); render(); $("na-nombre").focus(); return; }
+      guardar("/api/asignaturas/nueva", { nombre: n, horas: +h }, function () {
+        S.pagA = Math.ceil(D.asignaturas.length / POR_PAGINA) - 1; toast("Asignatura creada");
+      }, function (msg) { setErr($("na-nombre"), $("na-e1"), msg); });
+      return;
+    }
+
+    if (f.id === "form-limite") {
+      var v = $("lim-pct").value;
+      if (!setErr($("lim-pct"), $("lim-err"), errPct(v))) return;
+      guardar("/api/limite", { porcentaje: +v }, function () { S.editLimite = false; toast("Límite cambiado al " + v + " %"); },
+        function (msg) { setErr($("lim-pct"), $("lim-err"), msg); });
+      return;
+    }
+
+    if (f.id === "form-setup-1") {
+      var p = $("su-pct").value;
+      if (!setErr($("su-pct"), $("su-e"), errPct(p))) return;
+      S.setup.limite = +p; S.setup.paso = 2; render(); $("na-nombre").focus();
+    }
+  });
+
+  cargar();
+})();
+</script>
+</body>
+</html>

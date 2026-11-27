@@ -17,15 +17,17 @@ def _pedir_entero(pregunta, minimo, maximo):
         valor = input(pregunta).strip()
         if valor.isdecimal() and minimo <= int(valor) <= maximo:
             return int(valor)
-        print("Introduce un numero entre {} y {}".format(minimo, maximo))
+        print("Escribe un número entre {} y {}".format(minimo, maximo))
 
 
 def configurar_porcentaje():
     """Si todavia no esta establecido, pregunta que porcentaje de horas se puede faltar por modulo y lo guarda."""
     if _leer_porcentaje() is not None:
         return
-    print("Todavia no has indicado que porcentaje de las horas de cada modulo puedes faltar.")
-    porcentaje = _pedir_entero("¿Que porcentaje de horas puedes faltar por modulo? (1-100): ", 1, 100)
+    print("Bienvenido a la Calculadora de Faltas. Antes de empezar hay que configurarla.")
+    print("Primero: ¿qué porcentaje de las horas de cada asignatura puedes faltar sin suspenderla?")
+    print("Lo decide tu centro (en muchos es el 20%).")
+    porcentaje = _pedir_entero("Porcentaje máximo de faltas (1-100): ", 1, 100)
     _guardar_porcentaje(porcentaje)
     print("Porcentaje guardado: {}%".format(porcentaje))
-    input("Pulsa enter para continuar")
+    input("Pulsa Enter para continuar")

@@ -19,7 +19,7 @@ def menu():
     6 (salir del programa)"""
 
     acciones = {"1": añadir, "2": consultar, "3": modificar, "4": materias}
-    bienvenida = "Bienvenido al menu principal"
+    bienvenida = "Calculadora de Faltas - Menú principal"
     aviso = ""
 
     try:
@@ -28,12 +28,17 @@ def menu():
             print("-" * len(bienvenida))
             print(bienvenida)
             print("-" * len(bienvenida))
+            print("1. Añadir una falta")
+            print("2. Consultar mis faltas")
+            print("3. Modificar o borrar una falta")
+            print("4. Gestionar asignaturas")
+            print("5. Terminar el año escolar (borra todos los datos)")
+            print("6. Salir")
             if aviso:
                 print(aviso)
                 aviso = ""
 
-            eleccion = input("Elije una opcion. 1. Añadir falta, 2. Consultar falta, 3. Modificar falta, "
-                             "4. Gestionar asignaturas, 5. Terminar año, 6. Salir: ").strip()
+            eleccion = input("Elige una opción (1-6): ").strip()
 
             if eleccion == "6":
                 return
@@ -43,6 +48,6 @@ def menu():
             elif eleccion in acciones:
                 acciones[eleccion]()
             else:
-                aviso = "Opcion incorrecta. Asegurate de introducir un numero del 1 al 6"
+                aviso = "Esa opción no existe. Escribe un número del 1 al 6"
     except (KeyboardInterrupt, EOFError):
         print("\nHasta pronto")

@@ -38,16 +38,20 @@ def sugerencia():
         # comparacion con enteros (faltadas/total >= limite% * porcentaje%) para evitar errores de redondeo
         return [nombre for nombre, total, faltadas in filas if faltadas * 10000 >= limite * porcentaje * total]
 
+    superadas = [nombre for nombre, total, faltadas in filas if faltadas * 100 > limite * total]
     alerta = en_umbral(PORCENTAJE_ALERTA)
     aviso = en_umbral(PORCENTAJE_AVISO)
 
     os.system("cls")
-    if alerta:
-        print("ALERTA: cuidado con {}, ¡tienes un {:g}% de faltas de asistencia o mas!".format(
-            random.choice(alerta), limite * PORCENTAJE_ALERTA / 100))
+    if superadas:
+        print("ALERTA: has superado el límite del {}% de faltas en {}. Según las normas, eso es suspenso por faltas.".format(
+            limite, ", ".join(superadas)))
+    elif alerta:
+        print("ALERTA: cuidado con {}, ¡tienes un {:g}% de faltas de asistencia o más! El límite es el {}%.".format(
+            random.choice(alerta), limite * PORCENTAJE_ALERTA / 100, limite))
     elif aviso:
-        print("AVISO: ojo con {}, ¡ya tienes un {:g}% de faltas de asistencia o mas!".format(
-            random.choice(aviso), limite * PORCENTAJE_AVISO / 100))
+        print("AVISO: ojo con {}, ¡ya tienes un {:g}% de faltas de asistencia o más! El límite es el {}%.".format(
+            random.choice(aviso), limite * PORCENTAJE_AVISO / 100, limite))
     else:
-        print("NOTA: ¡Vas muy bien con tus faltas de asistencia! ¡Sigue asi!")
-    input("Pulsa enter para continuar")
+        print("NOTA: ¡Vas muy bien con tus faltas de asistencia! ¡Sigue así!")
+    input("Pulsa Enter para ir al menú")

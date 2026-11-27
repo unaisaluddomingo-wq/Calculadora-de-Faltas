@@ -8,27 +8,27 @@ def nuevo_año():
     #Termina el año escolar borrando la base de datos. Devuelve True si se ha borrado, para que el menu cierre el programa
 
     os.system("cls")
-    print("¿Estas seguro de que deseas terminar el año escolar?")
-    print("Esta accion eliminara la base de datos con todas tus faltas de asistencia, asignaturas registradas y demas informacion")
-    print("Esta accion no es reversible")
+    print("¿Seguro que quieres terminar el año escolar?")
+    print("Se borrarán todas tus faltas, tus asignaturas y el porcentaje máximo, y el programa se cerrará.")
+    print("No se puede deshacer.")
 
     decision = ""
     while decision not in ("s", "n"):
-        decision = input("¿Deseas continuar [S/N]? ").strip().lower()
+        decision = input("¿Quieres borrarlo todo? (S/N): ").strip().lower()
         if decision not in ("s", "n"):
-            print("Respuesta no valida. Escribe S o N")
+            print("Responde S (sí) o N (no)")
 
     if decision == "n":
         print("No se ha borrado nada")
-        input("Pulsa enter para continuar...")
+        input("Pulsa Enter para continuar")
         return False
 
     if DB_PATH.exists():
         os.remove(DB_PATH)
 
     os.system("cls")
-    print("Se ha borrado la base de datos y con ella todos los datos, al volver a encender el programa aparecera")
-    print("todo el proceso de configuracion")
+    print("Se han borrado todos los datos. La próxima vez que abras el programa empezarás de cero,")
+    print("eligiendo el porcentaje y tus asignaturas.")
     print("¡Mucha suerte en tu nuevo año escolar!")
-    input("Pulsa enter para salir...")
+    input("Pulsa Enter para salir")
     return True

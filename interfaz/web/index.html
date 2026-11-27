@@ -118,7 +118,8 @@ main > * { min-width: 0; }
 .section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; }
 .section-head h1 { font-size: var(--t-lg); }
 .section-head p { color: var(--muted); font-size: var(--t-sm); }
-.field-inline { display: flex; align-items: center; gap: 8px; font-size: var(--t-sm); color: var(--muted); }
+.field-inline { display: flex; align-items: center; gap: 8px; font-size: var(--t-sm); color: var(--muted); max-width: 100%; }
+.field-inline .input { min-width: 0; max-width: 100%; text-overflow: ellipsis; }
 .table-box { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface); }
 table { width: 100%; border-collapse: collapse; font-size: var(--t-sm); }
 th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); white-space: nowrap; }
@@ -391,7 +392,7 @@ dialog.sheet[open] { animation: slide .22s ease-out; }
       return '<option value="' + esc(a.nombre) + '"' + (a.nombre === S.filtro ? " selected" : "") + '>' + (i + 1) + '. ' + esc(a.nombre) + '</option>';
     }).join("");
     var cab = '<div class="section-head"><div><h1>Faltas registradas</h1><p>Pulsa una falta para editarla o borrarla.</p></div>' +
-      '<label class="field-inline" for="filtro">Ver<select class="input" id="filtro" style="width:auto">' + opts + '</select></label></div>';
+      '<label class="field-inline" for="filtro">Asignatura<select class="input" id="filtro" style="width:auto">' + opts + '</select></label></div>';
 
     if (!D.faltas.length) {
       return cab + '<div class="table-box"><div class="empty"><h2>Todavía no hay faltas</h2><p>Cuando faltes a clase, apúntalo aquí para saber cuántas horas te quedan en cada asignatura.</p><button type="button" class="btn primary" data-action="open-add">Añadir falta</button></div></div>';
@@ -490,7 +491,7 @@ dialog.sheet[open] { animation: slide .22s ease-out; }
       '<button class="btn" type="submit">Añadir</button></form>' +
       (lista ? '<ul class="added">' + lista + '</ul>' : "") +
       '<p class="error" id="su-fin-err" role="alert"></p>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn primary" data-action="setup-fin"' + (st.asignaturas.length ? "" : " disabled") + '>Empezar</button>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="btn primary" data-action="setup-fin">Empezar</button>' +
       '<button type="button" class="btn" data-action="setup-atras">Volver al paso 1</button></div></div>';
   }
 
@@ -617,6 +618,15 @@ dialog.sheet[open] { animation: slide .22s ease-out; }
       case "setup-quitar": S.setup.asignaturas.splice(+el.dataset.i, 1); break;
       case "setup-atras": S.setup.paso = 1; break;
       case "setup-fin":
+        // si ha escrito una asignatura y no ha pulsado Añadir, se añade sola en vez de perderla
+        var pn = $("na-nombre").value.trim(), ph = $("na-horas").value.trim();
+        if (pn || ph) {
+          var okN = setErr($("na-nombre"), $("na-e1"), errNombre(pn)), okH = setErr($("na-horas"), $("na-e2"), errHorasA(ph));
+          if (!okN || !okH) { (okN ? $("na-horas") : $("na-nombre")).focus(); return; }
+          S.setup.asignaturas.push({ nombre: pn, horas: +ph });
+          render();
+        }
+        if (!S.setup.asignaturas.length) { render(); $("su-fin-err").textContent = "Añade al menos una asignatura para empezar."; $("na-nombre").focus(); return; }
         guardar("/api/configurar", { porcentaje: S.setup.limite, asignaturas: S.setup.asignaturas }, function () {
           S.vista = "resumen"; S.filtro = ""; S.pagF = 0; S.pagA = 0; S.setup = null;
         }, function (msg) { $("su-fin-err").textContent = msg; });

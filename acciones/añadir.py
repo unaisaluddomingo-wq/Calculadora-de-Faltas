@@ -1,5 +1,6 @@
 import msvcrt
 import os
+import time
 from datetime import date
 
 from acciones.db_check import conectar
@@ -22,7 +23,6 @@ def _tabla(cabeceras, filas):
 def _elegir_asignatura(pregunta):
     """Muestra las asignaturas de 5 en 5 (flechas para cambiar de pagina) y devuelve el nombre de la elegida."""
     filas = [("{}.".format(i), nombre) for i, nombre in enumerate(asignaturas(), start=1)]
-    abortar = len(filas) + 1  # numero inmediatamente posterior a la ultima opcion
     paginas = (len(filas) - 1) // POR_PAGINA + 1
     pagina = 0
     escrito = ""
@@ -32,8 +32,9 @@ def _elegir_asignatura(pregunta):
         print("\033[3J\033[H", end="")  # borra tambien lo que quede en el historial de la terminal
         inicio = pagina * POR_PAGINA
         print(_tabla(["N.", "Asignatura"], filas[inicio:inicio + POR_PAGINA]))
-        print("Pagina {}/{} (usa las flechas para cambiar de pagina)".format(pagina + 1, paginas))
-        print("{}. Abortar".format(abortar))
+        if paginas > 1:
+            print("Página {}/{} (usa las flechas para cambiar de página)".format(pagina + 1, paginas))
+        print("0. Volver sin elegir (o pulsa Esc)")
         if aviso:
             print(aviso)
             aviso = ""
@@ -43,7 +44,11 @@ def _elegir_asignatura(pregunta):
         flecha = ""
         if tecla in ("\x00", "\xe0"):
             flecha = msvcrt.getwch()
-        elif tecla == "\x1b" and msvcrt.kbhit():
+        elif tecla == "\x1b":
+            time.sleep(0.05)  # deja llegar el resto de la secuencia si es una flecha y no un Esc
+            if not msvcrt.kbhit():
+                print()
+                return None  # Esc solo: volver sin elegir nada
             # algunas terminales envian las flechas como secuencias ANSI: ESC [ A/B/C/D
             if msvcrt.getwch() in ("[", "O") and msvcrt.kbhit():
                 flecha = {"A": "H", "B": "P", "C": "M", "D": "K"}.get(msvcrt.getwch(), "")
@@ -53,14 +58,14 @@ def _elegir_asignatura(pregunta):
             elif flecha in ("M", "P"):
                 pagina = min(pagina + 1, paginas - 1)
         elif tecla == "\r":
-            if escrito == str(abortar):
+            if escrito == "0":
                 print()
                 return None
             for numero, nombre in filas:
                 if numero.rstrip(".") == escrito:
                     print()
                     return nombre
-            aviso = "Numero de asignatura incorrecto"
+            aviso = "No hay ninguna asignatura con el número {}".format(escrito) if escrito else "Escribe un número y pulsa Enter"
             escrito = ""
         elif tecla == "\b":
             escrito = escrito[:-1]
@@ -75,23 +80,34 @@ def _pedir_entero(pregunta, minimo, maximo):
         valor = input(pregunta).strip()
         if valor.isdecimal() and minimo <= int(valor) <= maximo:
             return int(valor)
-        print("Introduce un numero entre {} y {}".format(minimo, maximo))
+        print("Escribe un número entre {} y {}".format(minimo, maximo))
 
 
-def _pedir_fecha():
-    """Pide dia, mes y año hasta que forman una fecha real y la devuelve como AAAA-MM-DD."""
+def _pedir_fecha(pregunta):
+    """Pide la fecha como DD/MM/AAAA (Enter vacio = hoy) hasta que es real y no futura. La devuelve como AAAA-MM-DD."""
+    hoy = date.today()
     while True:
-        dia = _pedir_entero("¿Que dia?: ", 1, 31)
-        mes = _pedir_entero("¿Que mes?: ", 1, 12)
-        año = _pedir_entero("¿Que año?: ", 2000, 2100)
+        texto = input(pregunta).strip()
+        if not texto:
+            return hoy.isoformat()
+        partes = texto.replace("-", "/").replace(".", "/").split("/")
+        if len(partes) != 3 or not all(parte.isdecimal() for parte in partes):
+            print("Escribe la fecha como DD/MM/AAAA, por ejemplo {}".format(hoy.strftime("%d/%m/%Y")))
+            continue
+        dia, mes, año = (int(parte) for parte in partes)
+        if año < 100:
+            año += 2000  # 27/11/26 -> 2026
         try:
             fecha = date(año, mes, dia)
-            if fecha > date.today():
-                print("La fecha no puede ser futura")
-                continue
-            return fecha.isoformat()
         except ValueError:
-            print("Esa fecha no existe, vuelve a introducirla")
+            print("Esa fecha no existe, vuelve a escribirla")
+            continue
+        if fecha > hoy:
+            print("La fecha no puede ser posterior a hoy")
+        elif fecha.year < 2000:
+            print("Escribe un año a partir del 2000")
+        else:
+            return fecha.isoformat()
 
 
 def _pedir_si_no(pregunta):
@@ -99,15 +115,16 @@ def _pedir_si_no(pregunta):
         respuesta = input(pregunta).strip().upper()
         if respuesta in ("S", "N"):
             return respuesta == "S"
-        print("Responde S o N")
+        print("Responde S (sí) o N (no)")
 
 
 def añadir():
-    nombre = _elegir_asignatura("Elige la asignatura a la que has faltado: ")
+    nombre = _elegir_asignatura("¿A qué asignatura has faltado? Escribe su número y pulsa Enter: ")
     if nombre is None:
         return
-    total_horas = _pedir_entero("¿Cuantas horas has faltado?: ", 1, 24)
-    fecha = _pedir_fecha()
+    print("Asignatura: {}".format(nombre))
+    total_horas = _pedir_entero("¿Cuántas horas has faltado? (1-24): ", 1, 24)
+    fecha = _pedir_fecha("¿Qué día faltaste? (DD/MM/AAAA, pulsa Enter si fue hoy): ")
     justificada = _pedir_si_no("¿Es justificada? (S/N): ")
 
     with conectar() as con:
@@ -115,6 +132,8 @@ def añadir():
             "INSERT INTO faltas (asignatura, fecha, justificada, horas) VALUES (?, ?, ?, ?)",
             (nombre, fecha, int(justificada), total_horas),
         )
-    print("Falta de asistencia registrada")
-    input("Pulsa enter para continuar")
+    print("Falta guardada: {} h en {} el {} ({})".format(
+        total_horas, nombre, date.fromisoformat(fecha).strftime("%d/%m/%Y"),
+        "justificada" if justificada else "sin justificar"))
+    input("Pulsa Enter para continuar")
 

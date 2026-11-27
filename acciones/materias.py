@@ -1,5 +1,6 @@
 import msvcrt
 import os
+import time
 
 from acciones.db_check import conectar
 
@@ -21,7 +22,6 @@ def _tabla(cabeceras, filas):
 def _elegir(cabeceras, filas, pregunta):
     """Muestra la tabla de 5 en 5 (flechas para cambiar de pagina) y devuelve la fila elegida.
     El usuario escribe el contenido de la primera columna (sin el punto final, si lo tiene)."""
-    abortar = int(str(filas[-1][0]).rstrip(".")) + 1  # numero inmediatamente posterior a la ultima opcion
     paginas = (len(filas) - 1) // POR_PAGINA + 1
     pagina = 0
     escrito = ""
@@ -31,8 +31,9 @@ def _elegir(cabeceras, filas, pregunta):
         print("\033[3J\033[H", end="")  # borra tambien lo que quede en el historial de la terminal
         inicio = pagina * POR_PAGINA
         print(_tabla(cabeceras, filas[inicio:inicio + POR_PAGINA]))
-        print("Pagina {}/{} (usa las flechas para cambiar de pagina)".format(pagina + 1, paginas))
-        print("{}. Abortar".format(abortar))
+        if paginas > 1:
+            print("Página {}/{} (usa las flechas para cambiar de página)".format(pagina + 1, paginas))
+        print("0. Volver sin elegir (o pulsa Esc)")
         if aviso:
             print(aviso)
             aviso = ""
@@ -42,7 +43,11 @@ def _elegir(cabeceras, filas, pregunta):
         flecha = ""
         if tecla in ("\x00", "\xe0"):
             flecha = msvcrt.getwch()
-        elif tecla == "\x1b" and msvcrt.kbhit():
+        elif tecla == "\x1b":
+            time.sleep(0.05)  # deja llegar el resto de la secuencia si es una flecha y no un Esc
+            if not msvcrt.kbhit():
+                print()
+                return None  # Esc solo: volver sin elegir nada
             # algunas terminales envian las flechas como secuencias ANSI: ESC [ A/B/C/D
             if msvcrt.getwch() in ("[", "O") and msvcrt.kbhit():
                 flecha = {"A": "H", "B": "P", "C": "M", "D": "K"}.get(msvcrt.getwch(), "")
@@ -52,14 +57,14 @@ def _elegir(cabeceras, filas, pregunta):
             elif flecha in ("M", "P"):
                 pagina = min(pagina + 1, paginas - 1)
         elif tecla == "\r":
-            if escrito == str(abortar):
+            if escrito == "0":
                 print()
                 return None
             for fila in filas:
                 if str(fila[0]).rstrip(".") == escrito:
                     print()
                     return fila
-            aviso = "Opcion incorrecta"
+            aviso = "No hay ninguna opción con el número {}".format(escrito) if escrito else "Escribe un número y pulsa Enter"
             escrito = ""
         elif tecla == "\b":
             escrito = escrito[:-1]
@@ -74,7 +79,7 @@ def _pedir_entero(pregunta, minimo, maximo):
         valor = input(pregunta).strip()
         if valor.isdecimal() and minimo <= int(valor) <= maximo:
             return int(valor)
-        print("Introduce un numero entre {} y {}".format(minimo, maximo))
+        print("Escribe un número entre {} y {}".format(minimo, maximo))
 
 
 def _pedir_si_no(pregunta):
@@ -82,7 +87,7 @@ def _pedir_si_no(pregunta):
         respuesta = input(pregunta).strip().upper()
         if respuesta in ("S", "N"):
             return respuesta == "S"
-        print("Responde S o N")
+        print("Responde S (sí) o N (no)")
 
 
 def _pedir_opcion(pregunta, opciones):
@@ -90,7 +95,7 @@ def _pedir_opcion(pregunta, opciones):
         opcion = input(pregunta).strip()
         if opcion in opciones:
             return opcion
-        print("Opcion incorrecta")
+        print("Esa opción no existe. Escribe uno de estos números: {}".format(", ".join(opciones)))
 
 
 def _pedir_nombre(pregunta, ignorar=None):
@@ -108,7 +113,7 @@ def _pedir_nombre(pregunta, ignorar=None):
 
 
 def _pedir_horas():
-    return _pedir_entero("¿Cuantas horas tiene la asignatura en todo el año? (1-{}): ".format(MAX_HORAS), 1, MAX_HORAS)
+    return _pedir_entero("¿Cuántas horas tiene la asignatura en todo el curso? (1-{}): ".format(MAX_HORAS), 1, MAX_HORAS)
 
 
 def _leer_asignaturas():
@@ -154,8 +159,9 @@ def _contar_faltas(nombre):
 
 def _añadir_una():
     nombre = _pedir_nombre("Nombre de la asignatura: ")
-    _crear(nombre, _pedir_horas())
-    print("Asignatura creada")
+    horas = _pedir_horas()
+    _crear(nombre, horas)
+    print("Asignatura creada: {} ({} horas)".format(nombre, horas))
 
 
 def configuracion_inicial():
@@ -163,10 +169,10 @@ def configuracion_inicial():
     if _leer_asignaturas():
         return
     os.system("cls")
-    print("No hay ninguna asignatura registrada. Tienes que añadir al menos una.")
+    print("Ahora añade tus asignaturas. Necesitas al menos una para empezar.")
     while True:
         _añadir_una()
-        if not _pedir_si_no("¿Quieres añadir otra asignatura? (S/N, N para pasar al programa): "):
+        if not _pedir_si_no("¿Quieres añadir otra asignatura? (S/N, N para empezar a usar el programa): "):
             return
 
 
@@ -174,41 +180,42 @@ def materias():
     while True:
         os.system("cls")
         opcion = _pedir_opcion(
-            "1. Crear asignatura\n2. Eliminar asignatura\n3. Cambiar nombre\n4. Cambiar horas\n5. Volver\n"
-            "6. Abortar\nElige una opcion: ", ("1", "2", "3", "4", "5", "6"))
-        if opcion in ("5", "6"):
+            "1. Crear asignatura\n2. Eliminar asignatura\n3. Cambiar el nombre de una asignatura\n"
+            "4. Cambiar las horas de una asignatura\n0. Volver al menú\nElige una opción: ", ("1", "2", "3", "4", "0"))
+        if opcion == "0":
             return
 
         if opcion == "1":
             _añadir_una()
         elif opcion == "2":
             if len(_leer_asignaturas()) == 1:
-                print("No puedes eliminar la unica asignatura que hay")
+                print("No puedes eliminar la única asignatura que hay")
             else:
-                elegida = _elegir_asignatura("Elige la asignatura a eliminar (N.): ")
+                elegida = _elegir_asignatura("¿Qué asignatura quieres eliminar? Escribe su número y pulsa Enter: ")
                 if elegida is None:
-                    return
+                    continue  # vuelve a las opciones de asignaturas
                 nombre, _ = elegida
                 faltas = _contar_faltas(nombre)
-                if _pedir_si_no("¿Seguro que quieres eliminar {}? Se borraran tambien sus {} faltas (S/N): "
-                                .format(nombre, faltas)):
+                if _pedir_si_no("¿Seguro que quieres eliminar {}? Se borrarán también sus {} faltas y no se puede "
+                                "deshacer (S/N): ".format(nombre, faltas)):
                     _borrar(nombre)
                     print("Asignatura eliminada")
                 else:
                     print("No se ha eliminado la asignatura")
         elif opcion == "3":
-            elegida = _elegir_asignatura("Elige la asignatura a renombrar (N.): ")
+            elegida = _elegir_asignatura("¿Qué asignatura quieres renombrar? Escribe su número y pulsa Enter: ")
             if elegida is None:
-                return
+                continue
             nombre, _ = elegida
-            _renombrar(nombre, _pedir_nombre("Nuevo nombre: ", ignorar=nombre))
+            _renombrar(nombre, _pedir_nombre("Nuevo nombre para {}: ".format(nombre), ignorar=nombre))
             print("Nombre cambiado")
         else:
-            elegida = _elegir_asignatura("Elige la asignatura a la que cambiar las horas (N.): ")
+            elegida = _elegir_asignatura("¿A qué asignatura le cambias las horas? Escribe su número y pulsa Enter: ")
             if elegida is None:
-                return
-            nombre, _ = elegida
+                continue
+            nombre, horas = elegida
+            print("{} tiene ahora {} horas".format(nombre, horas))
             _cambiar_horas(nombre, _pedir_horas())
             print("Horas cambiadas")
 
-        input("Pulsa enter para continuar")
+        input("Pulsa Enter para continuar")
